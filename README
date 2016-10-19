@@ -1,0 +1,22 @@
+Simple Tracer HOW TO
+
+1. build
+## download the libs archive from [1]
+$ mkdir libs
+$ cd libs
+$ unzip /path/to/libs/archive
+$ make clean && make
+
+2. install
+$ make install prefix=`pwd`/inst
+
+3. run
+$ cd ./inst/bin
+$ export LD_LIBRARY_PATH=`pwd`/../lib
+$ ./simple_tracer --payload libhttp-parser.so < <input_test_case>
+
+## --payload sepcifies the shared object that you want to trace. This must
+## export the payload that is the tested sw entry point.
+## <input_test_case> is corpus file that represents a test case
+
+[1] https://bitbucket.org/symexec/simpletracer/downloads/libs.zip
