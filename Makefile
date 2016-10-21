@@ -20,9 +20,6 @@ all: $(simple_tracer)
 install: $(simple_tracer)
 	install -m 0755 $(simple_tracer) -t $(prefix)/bin -D
 	install -m 0755 libs/* -t $(prefix)/lib -D
-	## dirty hack!!! We need to fix the manual loader
-	install -m 0755 libs/librevtracerwrapper.so -t $(prefix)/bin -D
-	install -m 0755 libs/revtracer.dll -t $(prefix)/bin -D
 
 $(simple_tracer): $(OBJ_FILES)
 	$(CXX) $(LD_PATHS) $(CXX_FLAGS) -o $@ $(OBJ_FILES) $(LD_FLAGS)
