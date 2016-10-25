@@ -1,5 +1,5 @@
 #include "ezOptionParser.h"
-#include "../Execution/Execution.h"
+#include "Execution.h"
 
 #ifdef _WIN32
 #include <Windows.h>
@@ -114,9 +114,10 @@ public :
 
 
 		const char module[] = "";
-		fprintf(fBlocks, "%-15s + %08lX\n",
+		fprintf(fBlocks, "%-15s + %08lX (%4d)\n",
 			(-1 == foundModule) ? unkmod : mInfo[foundModule].Name,
-			(DWORD)offset
+			(DWORD)offset,
+			ctrl->GetLastBasicBlockCost(ctx)
 		);
 		return EXECUTION_ADVANCE;
 	}
