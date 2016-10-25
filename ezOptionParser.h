@@ -31,7 +31,7 @@ Bruce Shankle added a crash fix in description printing.
 #include <sstream>
 #include <cstring>
 
-#include "../CommonCrossPlatform/Common.h"
+#include "Common.h"
 
 namespace ez {
 #define DEBUGLINE() printf("%s:%d\n", __FILE__, __LINE__);
