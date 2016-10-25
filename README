@@ -26,7 +26,7 @@ $ make install prefix=`pwd`/inst
 3. run
 $ cd ./inst/bin
 $ export LD_LIBRARY_PATH=`pwd`/../lib
-$ ./simple_tracer --payload libhttp-parser.so < <input_test_case>
+$ ./tracer.simple --payload libhttp-parser.so < <input_test_case>
 
 ## --payload specifies the shared object that you want to trace. This must
 ## export the payload that is the tested sw entry point.
