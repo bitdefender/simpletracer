@@ -31,7 +31,11 @@ Bruce Shankle added a crash fix in description printing.
 #include <sstream>
 #include <cstring>
 
-#include "Common.h"
+#ifdef __linux__
+#define SPRINTF(buffer, format, ...) sprintf((buffer), (format), ##__VA_ARGS__)
+#else
+#define SPRINTF(buffer, format, ...) sprintf_s((buffer), (format), ##__VA_ARGS__)
+#endif
 
 namespace ez {
 #define DEBUGLINE() printf("%s:%d\n", __FILE__, __LINE__);
