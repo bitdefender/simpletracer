@@ -1,5 +1,7 @@
 #include "ezOptionParser.h"
+#include "BinLog.h"
 #include "Execution.h"
+#include "Common.h"
 
 #ifdef _WIN32
 #include <Windows.h>
@@ -14,6 +16,10 @@ ExecutionController *ctrl = NULL;
 class CustomObserver : public ExecutionObserver {
 public :
 	FILE *fBlocks;
+	bool binOut;
+
+	BinLogWriter *blw;
+
 	std::string patchFile;
 	ModuleInfo *mInfo;
 	int mCount;
@@ -113,18 +119,35 @@ public :
 		}
 
 
-		const char module[] = "";
-		fprintf(fBlocks, "%-15s + %08lX (%4d)\n",
-			(-1 == foundModule) ? unkmod : mInfo[foundModule].Name,
-			(DWORD)offset,
-			ctrl->GetLastBasicBlockCost(ctx)
-		);
+		if (binOut) {
+			blw->WriteEntry((-1 == foundModule) ? unkmod : mInfo[foundModule].Name, offset, ctrl->GetLastBasicBlockCost(ctx));
+		} else {
+			fprintf(fBlocks, "%-15s + %08lX (%4d)\n",
+				(-1 == foundModule) ? unkmod : mInfo[foundModule].Name,
+				(DWORD)offset,
+				ctrl->GetLastBasicBlockCost(ctx)
+			);
+		}
 		return EXECUTION_ADVANCE;
 	}
 
 	virtual unsigned int ExecutionEnd(void *ctx) {
 		fflush(fBlocks);
 		return EXECUTION_TERMINATE;
+	}
+
+	CustomObserver() {
+		fBlocks = nullptr;
+		binOut = false;
+
+		blw = nullptr;
+	}
+
+	~CustomObserver() {
+		if (nullptr != blw) {
+			delete blw;
+			blw = nullptr;
+		}
 	}
 } observer;
 
@@ -180,7 +203,16 @@ int main(int argc, const char *argv[]) {
 	);
 
 	opt.add(
-		"payload." LIB_EXT,
+		"",
+		false,
+		0,
+		0,
+		"Use binary logging instead of textual logging.",
+		"--binlog"
+	);
+
+	opt.add(
+		"payload" LIB_EXT,
 		0,
 		1,
 		0,
@@ -243,11 +275,15 @@ int main(int argc, const char *argv[]) {
 		return 0;
 	}
 
+	if (opt.isSet("--binlog")) {
+		observer.binOut = true;
+	}
+
+
 	std::string fName;
 	opt.get("-o")->getString(fName);
-	std::cout << "Writing output to " << fName << std::endl;
-
-
+	std::cout << "Writing " << (observer.binOut ? "binary" : "text") << " output to " << fName << std::endl;
+	
 	char *buff = payloadBuffer;
 	unsigned int bSize = MAX_BUFF;
 	do {
@@ -258,7 +294,11 @@ int main(int argc, const char *argv[]) {
 		}
 	} while (!feof(stdin));
 
-	FOPEN(observer.fBlocks, fName.c_str(), "wt");
+	FOPEN(observer.fBlocks, fName.c_str(), observer.binOut ? "wb" : "wt");
+
+	if (observer.binOut) {
+		observer.blw = new BinLogWriter(observer.fBlocks);
+	}
 		
 	if (opt.isSet("-m")) {
 		opt.get("-m")->getString(observer.patchFile);

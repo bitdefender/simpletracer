@@ -139,7 +139,7 @@ typedef void* EVENT_T;
 
 // manual dynamic loading
 typedef HMODULE lib_t;
-#define GET_LIB_HANDLER(libname) GetModuleHandleW((libname))
+#define GET_LIB_HANDLER(libname) LoadLibraryA((libname))
 #define CLOSE_LIB
 #define LOAD_PROC(libhandler, szProc) GetProcAddress((libhandler), (szProc))
 
