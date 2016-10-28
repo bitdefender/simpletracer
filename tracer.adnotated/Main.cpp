@@ -1,7 +1,7 @@
 #include "ezOptionParser.h"
 #include "BinLog.h"
-#include "Execution/Execution.h"
-#include "CommonCrossPlatform/Common.h"
+#include "Execution.h"
+#include "Common.h"
 
 #ifdef _WIN32
 #include <Windows.h>
