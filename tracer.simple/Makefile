@@ -6,7 +6,7 @@ CC := gcc
 CXX := g++
 CPP_FILES := BinLog.cpp Main.cpp
 OBJ_FILES := BinLog.o Main.o
-LD_PATHS := -L$(makefile_dir)/libs
+LD_PATHS := -L$(makefile_dir)/../libs
 
 LD_FLAGS := -lexecution -lpthread -ldl -ldisablesse
 CC_FLAGS_CROSS = -D__cdecl="" -D__stdcall=""
