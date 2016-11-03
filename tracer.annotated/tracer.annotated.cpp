@@ -13,7 +13,13 @@
 extern "C" void patch__rtld_global_ro();
 #endif
 
+unsigned int varCount = 1;
 ExecutionController *ctrl = NULL;
+
+#define MAX_BUFF 4096
+typedef int(*PayloadFunc)();
+char *payloadBuffer = nullptr;
+PayloadFunc Payload = nullptr;
 
 class BitMap {
 private:
@@ -26,7 +32,7 @@ public :
 	BitMap(unsigned int size) {
 		__id__ = 'PMTB';
 		sz = size;
-		data.resize(sz >> 5, 0);
+		data.resize((sz + 0x1f) >> 5, 0);
 		refCount = 1;
 		isZero = true;
 	}
@@ -54,6 +60,15 @@ public :
 		}
 
 		return true;
+	}
+
+	void SetBit(unsigned int bit) {
+		isZero = false;
+		data[bit >> 5] |= (1 << (bit & 0x1F));
+	}
+
+	bool GetBit(unsigned int bit) const {
+		return 0 != (data[bit >> 5] & (1 << (bit & 0x1F)));
 	}
 
 	bool IsZero() {
@@ -134,6 +149,18 @@ public:
 		count += rhs->count;
 	}
 
+	void Append(BitMap *rhs) {
+		bitmaps[count] = rhs;
+		count++;
+	}
+
+	void Prepend(BitMap *rhs) {
+		for (unsigned int i = count; i > 0; --i) {
+			bitmaps[i] = bitmaps[i - 1];
+		}
+		bitmaps[0] = rhs;
+	}
+
 	BitMap *Consolidate(unsigned int fIdx, unsigned int lIdx) {
 		BitMap *ret = bitmaps[lIdx]->Clone();
 
@@ -162,16 +189,22 @@ public:
 
 class TrackingExecutor : public sym::SymbolicExecutor {
 public :
-	TrackingExecutor(sym::SymbolicEnvironment *e) : SymbolicExecutor(e) {
+	void *lastCondition[3];
+	unsigned int condCount;
 
+	TrackingExecutor(sym::SymbolicEnvironment *e) : SymbolicExecutor(e) {
+		condCount = 0;
+		lastCondition[0] = lastCondition[1] = lastCondition[2] = nullptr;
 	}
 
 	virtual void *CreateVariable(const char *name, rev::DWORD size) {
-		return nullptr;
+		BitMap *bmp = new BitMap(varCount);
+		bmp->SetBit(atoi(&name[2]));
+		return bmp;
 	}
 
 	virtual void *MakeConst(rev::DWORD value, rev::DWORD bits) {
-		return &bitMapZero;
+		return bitMapZero;
 	}
 
 	virtual void *ExtractBits(void *expr, rev::DWORD lsb, rev::DWORD size) {
@@ -194,30 +227,62 @@ public :
 	virtual void *ConcatBits(void *expr1, void *expr2) {
 		unsigned int *id1 = (unsigned int *)expr1, *id2 = (unsigned int *)expr2;
 
-		if (('PMBS' != *id1) || ('PBMS' != *id2)) {
+		if (('PMBS' == *id1) && ('PMBS' == *id2)) {
+			SplitBitMap *sbmp1 = (SplitBitMap *)expr1, *sbmp2 = (SplitBitMap *)expr2;
+
+			sbmp1->Append(sbmp2);
+			sbmp2->DelRef(); // maybe
+
+			return sbmp1;
+		}
+
+		if (('PMTB' == *id1) && ('PMBS' == *id2)) {
+			BitMap *bmp1 = (BitMap *)expr1;
+			SplitBitMap *sbmp2 = (SplitBitMap *)expr2;
+
+			sbmp2->Prepend(bmp1);
+			return sbmp2;
+		}
+
+		if (('PMBS' == *id1) && ('PMTB' == *id2)) {
+			SplitBitMap *sbmp1 = (SplitBitMap *)expr1;
+			BitMap *bmp2 = (BitMap *)expr2;
+
+			sbmp1->Append(bmp2);
+			return sbmp1;
+		}
+
+		if (('PMTB' == *id1) && ('PMTB' == *id2)) {
 			DEBUG_BREAK;
 		}
 
-		SplitBitMap *sbmp1 = (SplitBitMap *)expr1, *sbmp2 = (SplitBitMap *)expr2;
-
-		sbmp1->Append(sbmp2);
-		sbmp2->DelRef(); // maybe
-
-		return sbmp1;
+		DEBUG_BREAK;
 	}
 
-	struct Operands {
-		rev::DWORD av;
-		rev::BOOL tr[4];
-		rev::DWORD cv[4];
-		void *sv[4];
-
-		rev::BOOL trf[7];
-		rev::BYTE cvf[7];
-		void *svf[7];
-	};
-
 	#define OPERAND_BITMASK(idx) (0x00010000 << (idx))
+
+	static const unsigned int flagValues[];
+
+	void ExecuteJCC(unsigned int flag, RiverInstruction *instruction) {
+		rev::BOOL isTracked;
+		rev::BYTE val;
+		void *lc;
+		
+		condCount = 0;
+		
+		for (int i = 0; i < 7; ++i) {
+			if ((1 << i) && instruction->testFlags) {
+				if (env->GetFlgValue(flag, isTracked, val, lc)) {
+					lastCondition[condCount] = lc;
+					condCount++;
+				}
+			}
+		}
+	}
+
+	void ResetCond() {
+		condCount = 0;
+	}
 
 	virtual void Execute(RiverInstruction *instruction) {
 		static const unsigned char flagList[] = {
@@ -291,6 +356,10 @@ public :
 			}
 		}
 
+		if ((0 == (instruction->modifiers & RIVER_MODIFIER_EXT)) && (0x70 <= instruction->opCode) && (instruction->opCode < 0x80)) {
+			ExecuteJCC(instruction->opCode - 0x70, instruction);
+		}
+
 		if ((nullptr != bRet) && (!bRet->IsZero())) {
 			for (int i = 0; i < 4; ++i) {
 				if (RIVER_SPEC_MODIFIES_OP(i) & instruction->specifiers) {
@@ -325,6 +394,17 @@ public :
 	}
 };
 
+const unsigned int TrackingExecutor::flagValues[] = {
+	RIVER_SPEC_FLAG_OF, RIVER_SPEC_FLAG_OF,
+	RIVER_SPEC_FLAG_CF, RIVER_SPEC_FLAG_CF,
+	RIVER_SPEC_FLAG_ZF, RIVER_SPEC_FLAG_ZF,
+	RIVER_SPEC_FLAG_ZF | RIVER_SPEC_FLAG_CF, RIVER_SPEC_FLAG_ZF | RIVER_SPEC_FLAG_CF,
+	RIVER_SPEC_FLAG_SF, RIVER_SPEC_FLAG_SF,
+	RIVER_SPEC_FLAG_PF, RIVER_SPEC_FLAG_PF,
+	RIVER_SPEC_FLAG_OF | RIVER_SPEC_FLAG_SF, RIVER_SPEC_FLAG_OF | RIVER_SPEC_FLAG_SF,
+	RIVER_SPEC_FLAG_OF | RIVER_SPEC_FLAG_SF | RIVER_SPEC_FLAG_ZF, RIVER_SPEC_FLAG_OF | RIVER_SPEC_FLAG_SF | RIVER_SPEC_FLAG_ZF,
+};
+
 class CustomObserver : public ExecutionObserver {
 public :
 	FILE *fBlocks;
@@ -340,7 +420,7 @@ public :
 
 	sym::SymbolicEnvironment *regEnv;
 	sym::SymbolicEnvironment *revEnv;
-	sym::SymbolicExecutor *executor;
+	TrackingExecutor *executor;
 
 	virtual void TerminationNotification(void *ctx) {
 		printf("Process Terminated\n");
@@ -419,10 +499,20 @@ public :
 			fPatch.close();
 
 			if (!ctxInit) {
+				bitMapZero = new BitMap(varCount);
+
 				revEnv = NewX86RevtracerEnvironment(ctx, ctrl); //new RevSymbolicEnvironment(ctx, ctrl);
 				regEnv = NewX86RegistersEnvironment(revEnv); //new OverlappedRegistersEnvironment();
 				executor = new TrackingExecutor(regEnv);
 				regEnv->SetExecutor(executor);
+
+				for (unsigned int i = 0; i < varCount; ++i) {
+					char vname[8];
+
+					sprintf(vname, "s[%d]", i);
+
+					revEnv->SetSymbolicVariable(vname, (rev::ADDR_TYPE)(&payloadBuffer[0]), 1);
+				}
 
 				ctxInit = true;
 			}
@@ -445,6 +535,18 @@ public :
 			}
 		}
 
+		if (executor->condCount) {
+			for (unsigned int i = 0; i < varCount; ++i) {
+				bool bPrint = true;
+				for (unsigned int j = 0; j < executor->condCount; ++j) {
+					bPrint &= ((BitMap *)executor->lastCondition[j])->GetBit(i);
+				}
+
+				if (bPrint) {
+					fprintf(fBlocks, "Using variable s[%d]\n", i);
+				}
+			}
+		}
 
 		if (binOut) {
 			blw->WriteEntry((-1 == foundModule) ? unkmod : mInfo[foundModule].Name, offset, ctrl->GetLastBasicBlockCost(ctx));
@@ -489,11 +591,6 @@ void __stdcall SymbolicHandler(void *ctx, void *offset, void *addr) {
 	observer.regEnv->SetCurrentInstruction(instr, offset);
 	observer.executor->Execute(instr);
 }
-
-#define MAX_BUFF 4096
-typedef int(*PayloadFunc)();
-char *payloadBuffer = nullptr;
-PayloadFunc Payload = nullptr;
 
 int main(int argc, const char *argv[]) {
 	ez::ezOptionParser opt;
@@ -633,6 +730,7 @@ int main(int argc, const char *argv[]) {
 		}
 	} while (!feof(stdin));
 
+	varCount = buff - payloadBuffer - 1;
 	FOPEN(observer.fBlocks, fName.c_str(), observer.binOut ? "wb" : "wt");
 
 	if (observer.binOut) {
@@ -648,7 +746,7 @@ int main(int argc, const char *argv[]) {
 
 	ctrl->SetEntryPoint((void*)Payload);
 	
-	ctrl->SetExecutionFeatures(TRACER_FEATURE_TRACKING);
+	ctrl->SetExecutionFeatures(TRACER_FEATURE_SYMBOLIC);
 
 	ctrl->SetExecutionObserver(&observer);
 	ctrl->SetSymbolicHandler(SymbolicHandler);

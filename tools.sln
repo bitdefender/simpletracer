@@ -5,7 +5,7 @@ VisualStudioVersion = 14.0.25123.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "tracer.simple", "tracer.simple\tracer.simple.vcxproj", "{0D05443D-36CB-44EE-9E5E-0784062E3ECF}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "tracer.adnotated", "tracer.adnotated\tracer.adnotated.vcxproj", "{F666A559-60D8-4739-9C7B-D6EB6C6CDCB1}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "tracer.annotated", "tracer.annotated\tracer.annotated.vcxproj", "{F666A559-60D8-4739-9C7B-D6EB6C6CDCB1}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
