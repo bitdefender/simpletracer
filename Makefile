@@ -18,7 +18,7 @@ cleanlibs:
 
 libs:
 	mkdir libs
-	wget --user=$(BITBUCKET_USER) -O libs/libs.zip --ask-password https://bitbucket.org/symexec/simpletracer/downloads/libs.zip && \
+	./libs.sh teodor-stoenescu simpletracer 0.0.1 libs.zip ./libs/libs.zip
 	yes | unzip ./libs/libs.zip -d ./libs
 
 deps:
