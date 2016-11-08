@@ -14,7 +14,7 @@ ELSE ()
 	execute_process (COMMAND rm ${CMAKE_BINARY_DIR}/libs.zip)
 	execute_process (COMMAND find /lib -name libc.so.6 -path *i386* OUTPUT_VARIABLE LIBC_PATH)
 	string (STRIP ${LIBC_PATH} LIBC_PATH)
-	execute_process (COMMAND ln -s -T ${LIBC_PATH} ${CMAKE_INSTALL_PREFIX}/lib/libc.so)
+	execute_process (COMMAND ln -s -T ${LIBC_PATH} ${CMAKE_INSTALL_PREFIX}/lib/libc.so.6)
 ENDIF ()
 
 # check dependencies
