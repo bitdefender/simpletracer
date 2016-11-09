@@ -22,70 +22,171 @@ char *payloadBuffer = nullptr;
 PayloadFunc Payload = nullptr;
 
 class BitMap {
-private:
-	unsigned int __id__;
+private :
 	unsigned int sz;
-	std::vector<unsigned int> data;
-	unsigned int refCount;
+	unsigned int ct;
+	unsigned int rw;
 	bool isZero;
-public :
-	BitMap(unsigned int size) {
-		__id__ = 'PMTB';
-		sz = size;
-		data.resize((sz + 0x1f) >> 5, 0);
-		refCount = 1;
-		isZero = true;
-	}
 
-	BitMap *Clone() const {
-		BitMap *ret = new BitMap(sz);
-		
-		ret->isZero = isZero;
-		for (unsigned int i = 0; i < data.size(); ++i) {
-			ret->data[i] = data[i];
+	unsigned int refCount;
+
+	std::vector<unsigned int> data;
+
+	inline void Init(unsigned int size, unsigned int rows) {
+		sz = size;
+		rw = rows;
+		ct = (sz + 0x1f) >> 5;
+		data.resize(ct * rw, 0);
+
+		refCount = 1;
+	}
+public :
+	static BitMap *Union(const BitMap &b1, const BitMap &b2) {
+		if ((b1.sz != b2.sz) || (b1.rw != b1.rw)) {
+			return nullptr;
 		}
+
+		BitMap *ret = new BitMap(b1.sz, b1.rw);
+
+		for (unsigned int i = 0; i < ret->rw; ++i) {
+			for (unsigned int j = 0; j < ret->ct; ++j) {
+				ret->data[i * ret->ct + j] = b1.data[i * ret->ct + j] | b2.data[i * ret->ct + j];
+			}
+		}
+
+		printf("Union ");
+		b1.Print();
+		printf(", ");
+		b2.Print();
+		printf("=> ");
+		ret->Print();
+		printf("\n");
 
 		return ret;
 	}
 
-	bool UnionWith(BitMap *rhs) {
-		if (sz != rhs->sz) {
-			return false;
+	void Union(const BitMap &rhs) {
+		if (((sz != rhs.sz) || (rw != rhs.rw)) && (rw != 1)) {
+			__asm int 3;
 		}
 
-		isZero &= rhs->IsZero();
+		printf("Selfunion ");
+		Print();
+		printf(", ");
+		rhs.Print();
+		printf("=> ");
 
-		for (unsigned int i = 0; i < data.size(); ++i) {
-			data[i] |= rhs->data[i];
-		}
-
-		return true;
-	}
-
-	void SetBit(unsigned int bit) {
-		isZero = false;
-		data[bit >> 5] |= (1 << (bit & 0x1F));
-	}
-
-	bool GetBit(unsigned int bit) const {
-		return 0 != (data[bit >> 5] & (1 << (bit & 0x1F)));
-	}
-
-	bool IsZero() {
-		if (isZero) {
-			return true;
-		}
-
-		for (auto &i : data) {
-			if (0 != i) {
-				return false;
+		if (rw == 1) {
+			for (unsigned int i = 0; i < rhs.rw; ++i) {
+				for (unsigned int j = 0; j < ct; ++j) {
+					data[j] |= rhs.data[i * ct + j];
+				}
+			}
+		} else {
+			for (unsigned int i = 0; i < rw; ++i) {
+				for (unsigned int j = 0; j < ct; ++j) {
+					data[i * ct + j] |= rhs.data[i * ct + j];
+				}
 			}
 		}
 
-		isZero = true;
-		return true;
+		Print();
+		printf("\n");
 	}
 
+	BitMap(unsigned int size, unsigned int rows) {
+		Init(size, rows);
+		isZero = true;
+	}
+
+	BitMap(const BitMap &b1, const BitMap &b2) {
+		if (b1.sz != b2.sz) {
+			__asm int 3;
+		}
+
+		Init(b1.sz, b1.rw + b2.rw);
+		isZero = b1.isZero & b2.isZero;
+
+		for (unsigned int i = 0; i < b1.rw; ++i) {
+			for (unsigned int j = 0; j < ct; ++j) {
+				data[i * ct + j] = b1.data[i * ct + j];
+			}
+		}
+
+		for (unsigned int i = 0; i < b2.rw; ++i) {
+			for (unsigned int j = 0; j < ct; ++j) {
+				data[(b1.rw + i) * ct + j] = b2.data[i * ct + j];
+			}
+		}
+	}
+
+	BitMap(const BitMap &o, unsigned int c = 1) {
+		Init(o.sz, c);
+
+		for (unsigned int j = 0; j < ct; ++j) {
+			unsigned int r = 0;
+			for (unsigned int i = 0; i < o.rw; ++i) {
+				r |= o.data[i * ct + j];
+			}
+
+			for (unsigned int i = 0; i < rw; ++i) {
+				data[i * ct + j] = r;
+			}
+		}
+	}
+
+	BitMap(const BitMap &o, unsigned int s, unsigned int c) {
+		Init(o.sz, c);
+
+		if (o.rw != 1) {
+			for (unsigned int i = 0; i < rw; ++i) {
+				for (unsigned int j = 0; j < ct; ++j) {
+					data[i * ct + j] = o.data[(i + s) * ct + j];
+				}
+			}
+		} else {
+			for (unsigned int i = 0; i < rw; ++i) {
+				for (unsigned int j = 0; j < ct; ++j) {
+					data[i * ct + j] = o.data[j];
+				}
+			}
+		}
+	}
+
+	void SetBit(unsigned int p) {
+		unsigned int m = 1 << (p & 0x1F);
+		for (unsigned int i = 0; i < rw; ++i) {
+			data[i * ct + (p >> 5)] |= m;
+		}
+
+		isZero = false;
+	}
+
+	bool GetBit(unsigned int p) const {
+		unsigned int m = 1 << (p & 0x1F);
+		unsigned int r = 0;
+
+		for (unsigned int i = 0; i < rw; ++i) {
+			r |= data[i * ct + (p >> 5)];
+		}
+
+		return 0 != (r & m);
+	}
+
+	bool IsZero() const {
+		return isZero;
+	}
+
+	void Print() const {
+		printf("<%08x> ", this);
+		for (unsigned int i = 0; i < rw; ++i) {
+			for (unsigned int j = 0; j < ct; ++j) {
+				printf("%08x ", data[i * ct + j]);
+			}
+			printf("| ");
+		}
+	}
+	
 	void AddRef() {
 		refCount++;
 	}
@@ -93,103 +194,17 @@ public :
 	void DelRef() {
 		refCount--;
 		if (0 == refCount) {
+			printf("Delete ");
+			Print();
+			printf("\n");
 			delete this;
 		}
 	}
 } *bitMapZero;
 
-class SplitBitMap {
-private:
-	unsigned int __id__;
-	BitMap *bitmaps[4];
-	unsigned int count;
-	unsigned int refCount;
-public:
-	SplitBitMap() {
-		__id__ = 'PMBS';
-		count = 4;
-		refCount = 1;
-		for (int i = 0; i < 4; ++i) {
-			bitmaps[i] = bitMapZero;
-			bitMapZero->AddRef();
-		}
-	}
-
-	SplitBitMap(BitMap *bmp, unsigned int size) {
-		__id__ = 'PMBS';
-		count = size;
-		refCount = 1;
-		for (unsigned int i = 0; i < size; ++i) {
-			bitmaps[i] = bmp;
-			bmp->AddRef();
-		}
-	}
-
-	void SetBitmap(unsigned int idx, BitMap *newBitmap) {
-		bitmaps[idx]->DelRef();
-		bitmaps[idx] = newBitmap;
-		bitmaps[idx]->AddRef();
-	}
-
-	SplitBitMap *Split(unsigned int fIdx, unsigned int cnt) {
-		SplitBitMap *ret = new SplitBitMap();
-
-		for (unsigned int i = 0; i < cnt; ++i) {
-			ret->SetBitmap(fIdx + i, bitmaps[i]);
-		}
-		ret->count = cnt;
-		return ret;
-	}
-
-	void Append(const SplitBitMap *rhs) {
-		for (unsigned int i = 0; i < rhs->count; ++i) {
-			bitmaps[i + count] = rhs->bitmaps[i];
-		}
-
-		count += rhs->count;
-	}
-
-	void Append(BitMap *rhs) {
-		bitmaps[count] = rhs;
-		count++;
-	}
-
-	void Prepend(BitMap *rhs) {
-		for (unsigned int i = count; i > 0; --i) {
-			bitmaps[i] = bitmaps[i - 1];
-		}
-		bitmaps[0] = rhs;
-	}
-
-	BitMap *Consolidate(unsigned int fIdx, unsigned int lIdx) {
-		BitMap *ret = bitmaps[lIdx]->Clone();
-
-		for (unsigned int i = fIdx; i < lIdx; ++i) {
-			ret->UnionWith(bitmaps[i]);
-		}
-
-		return ret;
-	}
-
-	void AddRef() {
-		refCount++;
-	}
-
-	void DelRef() {
-		refCount--;
-		if (0 == refCount) {
-			for (int i = 0; i < 4; ++i) {
-				bitmaps[i]->DelRef();
-			}
-
-			delete this;
-		}
-	}
-};
-
 class TrackingExecutor : public sym::SymbolicExecutor {
 public :
-	void *lastCondition[3];
+	BitMap *lastCondition[3];
 	unsigned int condCount;
 
 	TrackingExecutor(sym::SymbolicEnvironment *e) : SymbolicExecutor(e) {
@@ -198,65 +213,67 @@ public :
 	}
 
 	virtual void *CreateVariable(const char *name, rev::DWORD size) {
-		BitMap *bmp = new BitMap(varCount);
+		BitMap *bmp = new BitMap(varCount, 1);
 		bmp->SetBit(atoi(&name[2]));
+
+		printf("Creating variable %s => ", name);
+		bmp->Print();
+		printf("\n");
+		fflush(stdout);
+
 		return bmp;
 	}
 
 	virtual void *MakeConst(rev::DWORD value, rev::DWORD bits) {
+		bitMapZero->AddRef();
 		return bitMapZero;
 	}
 
 	virtual void *ExtractBits(void *expr, rev::DWORD lsb, rev::DWORD size) {
-		unsigned int *id = (unsigned int *)expr;
-		SplitBitMap *sbmp;
-		BitMap *bmp;
+		BitMap *bmp = (BitMap *)expr;
 
-		switch (*id) {
-			case 'PMBS' : //split bitmap
-				sbmp = (SplitBitMap *)expr;
-				return sbmp->Split(lsb >> 3, size >> 3);
-			case 'PMTB' : // normal bitmap
-				bmp = (BitMap *)expr;
-				return new SplitBitMap(bmp, size >> 3);
-			default :
-				DEBUG_BREAK;
+		if (nullptr == bmp) {
+			return nullptr;
 		}
+
+		BitMap *ret = new BitMap(*bmp, 4 - (lsb >> 3) - (size >> 3), size >> 3);
+		printf("Extract ");
+		bmp->Print();
+		printf(" %d %d => ", 4 - (lsb >> 3) - (size >> 3), size >> 3);
+		ret->Print();
+		printf("\n");
+		fflush(stdout);
+		return ret;
 	}
 
 	virtual void *ConcatBits(void *expr1, void *expr2) {
-		unsigned int *id1 = (unsigned int *)expr1, *id2 = (unsigned int *)expr2;
+		BitMap *bmp1 = (BitMap *)expr1;
+		BitMap *bmp2 = (BitMap *)expr2;
 
-		if (('PMBS' == *id1) && ('PMBS' == *id2)) {
-			SplitBitMap *sbmp1 = (SplitBitMap *)expr1, *sbmp2 = (SplitBitMap *)expr2;
+		if (nullptr == bmp1) {
+			if (nullptr == bmp2) {
+				return nullptr;
+			}
 
-			sbmp1->Append(sbmp2);
-			sbmp2->DelRef(); // maybe
-
-			return sbmp1;
+			bitMapZero->AddRef();
+			bmp1 = bitMapZero;
 		}
 
-		if (('PMTB' == *id1) && ('PMBS' == *id2)) {
-			BitMap *bmp1 = (BitMap *)expr1;
-			SplitBitMap *sbmp2 = (SplitBitMap *)expr2;
-
-			sbmp2->Prepend(bmp1);
-			return sbmp2;
+		if (nullptr == bmp2) {
+			bitMapZero->AddRef();
+			bmp2 = bitMapZero;
 		}
 
-		if (('PMBS' == *id1) && ('PMTB' == *id2)) {
-			SplitBitMap *sbmp1 = (SplitBitMap *)expr1;
-			BitMap *bmp2 = (BitMap *)expr2;
-
-			sbmp1->Append(bmp2);
-			return sbmp1;
-		}
-
-		if (('PMTB' == *id1) && ('PMTB' == *id2)) {
-			DEBUG_BREAK;
-		}
-
-		DEBUG_BREAK;
+		BitMap *ret = new BitMap(*bmp1, *bmp2);
+		printf("Concat ");
+		bmp1->Print();
+		printf(", ");
+		bmp2->Print();
+		printf("=> ");
+		ret->Print();
+		printf("\n");
+		fflush(stdout);
+		return ret;
 	}
 
 	#define OPERAND_BITMASK(idx) (0x00010000 << (idx))
@@ -272,8 +289,9 @@ public :
 		
 		for (int i = 0; i < 7; ++i) {
 			if ((1 << i) && instruction->testFlags) {
-				if (env->GetFlgValue(flag, isTracked, val, lc)) {
-					lastCondition[condCount] = lc;
+				if (env->GetFlgValue((1 << i), isTracked, val, lc)) {
+					lastCondition[condCount] = (BitMap *)lc;
+					lastCondition[condCount]->AddRef();
 					condCount++;
 				}
 			}
@@ -283,6 +301,13 @@ public :
 	void ResetCond() {
 		condCount = 0;
 	}
+
+	struct Operands {
+		bool useOp[4];
+		BitMap *operands[4];
+		bool useFlag[7];
+		BitMap *flags[7];
+	};
 
 	virtual void Execute(RiverInstruction *instruction) {
 		static const unsigned char flagList[] = {
@@ -296,33 +321,22 @@ public :
 
 		static const int flagCount = sizeof(flagList) / sizeof(flagList[0]);
 
-		BitMap *bRet = nullptr;
-		bool needClone = false;
+		Operands ops;
+		memset(&ops, 0, sizeof(ops));
+		bool trk = false;
 
 		for (int i = 0; i < 4; ++i) {
 			rev::BOOL isTracked;
 			rev::DWORD val;
 			void *opVal;
-			if (env->GetOperand(i, isTracked, val, opVal)) {
+			if (true == (ops.useOp[i] = env->GetOperand(i, isTracked, val, opVal))) {
 				if (isTracked) {
-					unsigned int *id = (unsigned int *)opVal;
-					BitMap *bmp = (BitMap *)opVal;
-					if ('PMBS' == *id) {
-						bmp = ((SplitBitMap *)opVal)->Consolidate(0, 3);
-					}
-
-					if (needClone) {
-						BitMap *t = bRet->Clone();
-						bRet->DelRef();
-						bRet = t;
-					}
-
-					if (nullptr == bRet) {
-						bmp->AddRef();
-						bRet = bmp;
-					} else {
-						bRet->UnionWith(bmp);
-					}
+					ops.operands[i] = (BitMap *)opVal;
+					ops.operands[i]->AddRef();
+					trk = true;
+				} else {
+					bitMapZero->AddRef();
+					ops.operands[i] = bitMapZero;
 				}
 			}
 		}
@@ -331,27 +345,14 @@ public :
 			rev::BOOL isTracked;
 			rev::BYTE val;
 			void *opVal;
-			if (true == env->GetFlgValue(flagList[i], isTracked, val, opVal)) {
+			if (true == (ops.useFlag[i] = env->GetFlgValue(flagList[i], isTracked, val, opVal))) {
 				if (isTracked) {
-					unsigned int *id = (unsigned int *)opVal;
-					BitMap *bmp = (BitMap *)opVal;
-					if ('PMBS' == *id) {
-						bmp = ((SplitBitMap *)opVal)->Consolidate(0, 3);
-					}
-
-					if (needClone) {
-						BitMap *t = bRet->Clone();
-						bRet->DelRef();
-						bRet = t;
-					}
-
-					if (nullptr == bRet) {
-						bmp->AddRef();
-						bRet = bmp;
-					}
-					else {
-						bRet->UnionWith(bmp);
-					}
+					ops.flags[i] = (BitMap *)opVal;
+					ops.flags[i]->AddRef();
+					trk = true;
+				} else {
+					bitMapZero->AddRef();
+					ops.operands[i] = bitMapZero;
 				}
 			}
 		}
@@ -360,20 +361,50 @@ public :
 			ExecuteJCC(instruction->opCode - 0x70, instruction);
 		}
 
-		if ((nullptr != bRet) && (!bRet->IsZero())) {
+		if (trk) {
+			BitMap *ret = new BitMap(varCount, 1);
+
+			for (int i = 0; i < 4; ++i) {
+				if (ops.useOp[i]) {
+					ret->Union(*ops.operands[i]);
+				}
+			}
+
+			for (int i = 0; i < flagCount; ++i) {
+				if (ops.useFlag[i]) {
+					ret->Union(*ops.flags[i]);
+				}
+			}
+
 			for (int i = 0; i < 4; ++i) {
 				if (RIVER_SPEC_MODIFIES_OP(i) & instruction->specifiers) {
 					// this will leak a lot of memory
-					env->SetOperand(i, bRet);
+					ret->AddRef();
+					env->SetOperand(i, ret);
 				}
 			}
 
 			for (int i = 0; i < flagCount; ++i) {
 				if (flagList[i] & instruction->modFlags) {
 					// whis will also leak a lot of memory
-					env->SetFlgValue(flagList[i], bRet);
+					ret->AddRef();
+					env->SetFlgValue(flagList[i], ret);
 				}
 			}
+
+			for (int i = 0; i < 4; ++i) {
+				if (ops.useOp[i]) {
+					ops.operands[i]->DelRef();
+				}
+			}
+
+			for (int i = 0; i < flagCount; ++i) {
+				if (ops.useFlag[i]) {
+					ops.flags[i]->DelRef();
+				}
+			}
+
+			ret->DelRef();
 		} else {
 			// unset all modified operands
 			for (int i = 0; i < 4; ++i) {
@@ -499,7 +530,7 @@ public :
 			fPatch.close();
 
 			if (!ctxInit) {
-				bitMapZero = new BitMap(varCount);
+				bitMapZero = new BitMap(varCount, 1);
 
 				revEnv = NewX86RevtracerEnvironment(ctx, ctrl); //new RevSymbolicEnvironment(ctx, ctrl);
 				regEnv = NewX86RegistersEnvironment(revEnv); //new OverlappedRegistersEnvironment();
@@ -511,7 +542,7 @@ public :
 
 					sprintf(vname, "s[%d]", i);
 
-					revEnv->SetSymbolicVariable(vname, (rev::ADDR_TYPE)(&payloadBuffer[0]), 1);
+					revEnv->SetSymbolicVariable(vname, (rev::ADDR_TYPE)(&payloadBuffer[i]), 1);
 				}
 
 				ctxInit = true;
@@ -547,6 +578,12 @@ public :
 				}
 			}
 		}
+
+		for (unsigned int i = 0; i < executor->condCount; ++i) {
+			executor->lastCondition[i]->DelRef();
+			executor->lastCondition[i] = nullptr;
+		}
+		executor->condCount = 0;
 
 		if (binOut) {
 			blw->WriteEntry((-1 == foundModule) ? unkmod : mInfo[foundModule].Name, offset, ctrl->GetLastBasicBlockCost(ctx));
