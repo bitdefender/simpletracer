@@ -1,6 +1,15 @@
 #include <stdio.h>
 #include <string.h>
+
+#if defined _WIN32 || defined __CYGWIN__
 #include "windirent.h"
+#define PATH_SEP "\\"
+#else
+#include <dirent.h>
+#define PATH_SEP "/"
+#endif
+
+#define MAX_PATH 4096
 
 struct CorpusItemHeader {
 	char fName[60];
@@ -44,20 +53,28 @@ bool BuildCorpus(const char *dir) {
 		
 		while (epdf = readdir(dpdf)) {
 			if (DT_REG == epdf->d_type) {
-				printf("Adding: %s\n", epdf->d_name);
-			
-				FILE *f = fopen(epdf->d_name, "rt");
-				fseek(f, 0L, SEEK_END);
-				long sz = ftell(f);
-				unsigned char *buff = new unsigned char[sz];
+				char path[MAX_PATH];
+				sprintf(path, "%s" PATH_SEP "%s", dir, epdf->d_name);
 
-				fseek(f, 0, SEEK_SET);
-				fread(buff, 1, sz, f);
+				printf("Adding: %s\n", path);
 
-				wr.AddItem(epdf->d_name, buff, sz);
+				FILE *f = fopen(path, "rt");
 
-				delete buff;
-				fclose(f);
+				if (nullptr == f) {
+					printf("File open error!!\n");
+				} else {
+					fseek(f, 0L, SEEK_END);
+					long sz = ftell(f);
+					unsigned char *buff = new unsigned char[sz];
+
+					fseek(f, 0, SEEK_SET);
+					fread(buff, 1, sz, f);
+
+					wr.AddItem(epdf->d_name, buff, sz);
+
+					delete buff;
+					fclose(f);
+				}
 			}
 			// std::cout << epdf->d_name << std::endl;
 		}
@@ -68,7 +85,7 @@ bool BuildCorpus(const char *dir) {
 
 int main(int argc, char *argv[]) {
 	if (argc < 2) {
-		printf("Usage %s fileMask\n\n", argv[0]);
+		printf("Usage %s directory\n\n", argv[0]);
 		return 0;
 	}
 
