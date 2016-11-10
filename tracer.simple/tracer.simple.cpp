@@ -24,6 +24,8 @@ public :
 	ModuleInfo *mInfo;
 	int mCount;
 
+	std::string fileName;
+
 	virtual void TerminationNotification(void *ctx) {
 		printf("Process Terminated\n");
 	}
@@ -102,6 +104,14 @@ public :
 
 		}
 
+		if (binOut) {
+			//blw->WriteEntry((-1 == foundModule) ? unkmod : mInfo[foundModule].Name, offset, ctrl->GetLastBasicBlockCost(ctx));
+
+		}
+		else {
+			fprintf(fBlocks, "## %s ##\n", fileName.c_str());
+		}
+
 		return EXECUTION_ADVANCE;
 	}
 
@@ -156,6 +166,11 @@ typedef int(*PayloadFunc)();
 char *payloadBuffer = nullptr;
 PayloadFunc Payload = nullptr;
 
+struct CorpusItemHeader {
+	char fName[60];
+	unsigned int size;
+};
+
 int main(int argc, const char *argv[]) {
 	ez::ezOptionParser opt;
 
@@ -209,6 +224,15 @@ int main(int argc, const char *argv[]) {
 		0,
 		"Use binary logging instead of textual logging.",
 		"--binlog"
+	);
+
+	opt.add(
+		"",
+		false,
+		0,
+		0,
+		"Use a corpus file instead of individual inputs.",
+		"--batch"
 	);
 
 	opt.add(
@@ -283,17 +307,6 @@ int main(int argc, const char *argv[]) {
 	std::string fName;
 	opt.get("-o")->getString(fName);
 	std::cout << "Writing " << (observer.binOut ? "binary" : "text") << " output to " << fName << std::endl;
-	
-	char *buff = payloadBuffer;
-	unsigned int bSize = MAX_BUFF;
-	do {
-		fgets(buff, bSize, stdin);
-		while (*buff) {
-			buff++;
-			bSize--;
-		}
-	} while (!feof(stdin));
-
 	FOPEN(observer.fBlocks, fName.c_str(), observer.binOut ? "wb" : "wt");
 
 	if (observer.binOut) {
@@ -313,9 +326,38 @@ int main(int argc, const char *argv[]) {
 
 	ctrl->SetExecutionObserver(&observer);
 	
-	ctrl->Execute();
+	if (opt.isSet("--batch")) {
+		freopen(NULL, "rb", stdin);
+		
+		while (!feof(stdin)) {
+			CorpusItemHeader header;
+			if ((1 == fread(&header, sizeof(header), 1, stdin)) &&
+					(header.size == fread(payloadBuffer, 1, header.size, stdin))) {
+				std::cout << "Using " << header.fName << " as input file." << std::endl;
 
-	ctrl->WaitForTermination();
+				observer.fileName = header.fName;
+
+				ctrl->Execute();
+				ctrl->WaitForTermination();
+			}
+		}
+
+	} else {
+		char *buff = payloadBuffer;
+		unsigned int bSize = MAX_BUFF;
+		do {
+			fgets(buff, bSize, stdin);
+			while (*buff) {
+				buff++;
+				bSize--;
+			}
+		} while (!feof(stdin));
+
+		observer.fileName = "stdin";
+
+		ctrl->Execute();
+		ctrl->WaitForTermination();
+	}
 
 	DeleteExecutionController(ctrl);
 	ctrl = NULL;
