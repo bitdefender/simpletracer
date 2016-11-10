@@ -121,7 +121,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="BinLog.cpp" />
-    <ClCompile Include="Main.cpp" />
+    <ClCompile Include="tracer.simple.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="BinLog.h" />
