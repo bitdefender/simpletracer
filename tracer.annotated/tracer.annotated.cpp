@@ -178,7 +178,7 @@ public :
 	}
 
 	void Print() const {
-		printf("<%08x> ", this);
+		printf("<%08p> ", this);
 		for (unsigned int i = 0; i < rw; ++i) {
 			for (unsigned int j = 0; j < ct; ++j) {
 				printf("%08x ", data[i * ct + j]);
@@ -201,6 +201,14 @@ public :
 		}
 	}
 } *bitMapZero;
+
+void AddReference(void *ref) {
+	((BitMap *)ref)->AddRef();
+}
+
+void DelReference(void *ref) {
+	((BitMap *)ref)->DelRef();
+}
 
 class TrackingExecutor : public sym::SymbolicExecutor {
 public :
@@ -536,6 +544,7 @@ public :
 				regEnv = NewX86RegistersEnvironment(revEnv); //new OverlappedRegistersEnvironment();
 				executor = new TrackingExecutor(regEnv);
 				regEnv->SetExecutor(executor);
+				regEnv->SetReferenceCounting(AddReference, DelReference);
 
 				for (unsigned int i = 0; i < varCount; ++i) {
 					char vname[8];
@@ -666,7 +675,7 @@ int main(int argc, const char *argv[]) {
 	);
 
 	opt.add(
-		"trace.simple.out", // Default.
+		"trace.annotated.out", // Default.
 		0, // Required?
 		1, // Number of args expected.
 		0, // Delimiter if expecting multiple args.
