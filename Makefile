@@ -1,4 +1,4 @@
-DIRS := tracer.simple
+DIRS := tracer.simple corpus.aggregator
 prefix := /usr/local
 
 all:
