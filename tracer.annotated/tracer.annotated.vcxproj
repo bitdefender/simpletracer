@@ -19,8 +19,8 @@
     </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{0D05443D-36CB-44EE-9E5E-0784062E3ECF}</ProjectGuid>
-    <RootNamespace>tracersimple</RootNamespace>
+    <ProjectGuid>{F666A559-60D8-4739-9C7B-D6EB6C6CDCB1}</ProjectGuid>
+    <RootNamespace>traceradnotated</RootNamespace>
     <WindowsTargetPlatformVersion>8.1</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
@@ -78,8 +78,8 @@
       <AdditionalIncludeDirectories>$(SolutionDir)include/;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
-      <AdditionalLibraryDirectories>$(OutDir);$(SolutionDir)lib/</AdditionalLibraryDirectories>
-      <AdditionalDependencies>execution.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>execution.lib;SymbolicEnvironment.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(OutDir);$(SolutionDir)lib/;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -102,8 +102,8 @@
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalLibraryDirectories>$(OutDir);$(SolutionDir)lib/</AdditionalLibraryDirectories>
-      <AdditionalDependencies>execution.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>execution.lib;SymbolicEnvironment.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(OutDir);$(SolutionDir)lib/;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -120,12 +120,13 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="BinLog.cpp" />
-    <ClCompile Include="tracer.simple.cpp" />
+    <ClInclude Include="BinLog.h" />
+    <ClInclude Include="Execution.h" />
+    <ClInclude Include="ezOptionParser.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="BinLog.h" />
-    <ClInclude Include="ezOptionParser.h" />
+    <ClCompile Include="BinLog.cpp" />
+    <ClCompile Include="Main.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
