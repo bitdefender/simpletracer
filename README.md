@@ -37,6 +37,10 @@ $ make libs
 ```
 $ make clean && make
 ```
+If this step faces errors, the cause is probably related to the github token. 
+
+Workaround:
+- download `libs.zip` from the latest <i>release</i> and unzip it in `simpletracer/`. 
 
 ## 3. install
 ```
