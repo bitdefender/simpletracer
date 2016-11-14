@@ -135,7 +135,7 @@ public :
 		if (binOut) {
 			blw->WriteEntry((-1 == foundModule) ? unkmod : mInfo[foundModule].Name, offset, bbInfo.cost);
 		} else {
-			fprintf(fBlocks, "%-15s + %08lX (%4d)\n",
+			fprintf(fBlocks, "%-15s + %08lX (%4ld)\n",
 				(-1 == foundModule) ? unkmod : mInfo[foundModule].Name,
 				(DWORD)offset,
 				bbInfo.cost

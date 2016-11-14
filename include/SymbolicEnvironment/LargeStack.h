@@ -1,7 +1,11 @@
 #ifndef _LARGE_STACK_H_
 #define _LARGE_STACK_H_
 
+#ifdef _WIN32
 #include <Windows.h>
+#endif
+
+#include "../CommonCrossPlatform/Common.h"
 
 namespace stk {
 	typedef unsigned int DWORD;
@@ -16,7 +20,7 @@ namespace stk {
 
 		DWORD offsets[3];
 
-		HANDLE hVirtualStack;
+		FILE_T hVirtualStack;
 
 		DWORD CurrentRegion() const;
 
@@ -25,9 +29,6 @@ namespace stk {
 	public:
 		LargeStack(DWORD *base, DWORD size, DWORD *top, char *fName);
 		~LargeStack();
-
-		void Push(DWORD value);
-		DWORD Pop();
 
 		void Update();
 	};

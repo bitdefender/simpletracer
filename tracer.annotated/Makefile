@@ -4,12 +4,12 @@ makefile_dir := $(patsubst %/,%,$(dir $(mkfile_path)))
 annotated_tracer := tracer.annotated
 CC := gcc
 CXX := g++
-CPP_FILES := BinLog.cpp Main.cpp
-OBJ_FILES := BinLog.o Main.o
+CPP_FILES := BinLog.cpp tracer.annotated.cpp
+OBJ_FILES := BinLog.o tracer.annotated.o
 LD_PATHS := -L$(makefile_dir)/../libs
 
-LD_FLAGS := -lexecution -lpthread -ldl -ldisablesse
-CC_FLAGS_CROSS = -D__cdecl="" -D__stdcall=""
+LD_FLAGS := -lsymbolicenvironment -lexecution -lpthread -ldl -ldisablesse
+CC_FLAGS_CROSS = -D__cdecl="" -D__stdcall="" -I../include/
 NO_SSE := -mno-mmx -mno-sse -march=i386
 CXX_FLAGS += -m32 $(NO_SSE) -std=c++11 $(CC_FLAGS_CROSS)
 CC_FLAGS += -m32 $(NO_SSE) $(CC_FLAGS_CROSS)
