@@ -39,8 +39,16 @@ private :
 		data.resize(ct * rw, 0);
 
 		refCount = 1;
+
+		printf("Create ");
+		Print();
+		printf("\n");
+
+		instCount++;
 	}
 public :
+	static int instCount;
+
 	static BitMap *Union(const BitMap &b1, const BitMap &b2) {
 		if ((b1.sz != b2.sz) || (b1.rw != b1.rw)) {
 			return nullptr;
@@ -76,6 +84,7 @@ public :
 		rhs.Print();
 		printf("=> ");
 
+		isZero &= rhs.isZero;
 		if (rw == 1) {
 			for (unsigned int i = 0; i < rhs.rw; ++i) {
 				for (unsigned int j = 0; j < ct; ++j) {
@@ -202,6 +211,8 @@ public :
 	}
 } *bitMapZero;
 
+int BitMap::instCount = 0;
+
 void AddReference(void *ref) {
 	((BitMap *)ref)->AddRef();
 }
@@ -288,17 +299,20 @@ public :
 
 	static const unsigned int flagValues[];
 
-	void ExecuteJCC(unsigned int flag, RiverInstruction *instruction) {
-		rev::BOOL isTracked;
-		rev::BYTE val;
-		void *lc;
-		
+	struct Operands {
+		bool useOp[4];
+		BitMap *operands[4];
+		bool useFlag[7];
+		BitMap *flags[7];
+	};
+
+	void ExecuteJCC(unsigned int flag, RiverInstruction *instruction, const Operands &ops) {
 		condCount = 0;
 		
 		for (int i = 0; i < 7; ++i) {
 			if ((1 << i) && instruction->testFlags) {
-				if (env->GetFlgValue((1 << i), isTracked, val, lc)) {
-					lastCondition[condCount] = (BitMap *)lc;
+				if (ops.useFlag[i]) {
+					lastCondition[condCount] = ops.flags[i];
 					lastCondition[condCount]->AddRef();
 					condCount++;
 				}
@@ -306,16 +320,18 @@ public :
 		}
 	}
 
+	void ExecuteJMPOp(unsigned int op, const Operands &ops) {
+		condCount = 0;
+		if (ops.useOp[op]) {
+			lastCondition[condCount] = ops.operands[op];
+			lastCondition[condCount]->AddRef();
+			condCount++;
+		}
+	}
+
 	void ResetCond() {
 		condCount = 0;
 	}
-
-	struct Operands {
-		bool useOp[4];
-		BitMap *operands[4];
-		bool useFlag[7];
-		BitMap *flags[7];
-	};
 
 	virtual void Execute(RiverInstruction *instruction) {
 		static const unsigned char flagList[] = {
@@ -329,9 +345,12 @@ public :
 
 		static const int flagCount = sizeof(flagList) / sizeof(flagList[0]);
 
+		printf("[%08x]\n", instruction->instructionAddress);
+
 		Operands ops;
 		memset(&ops, 0, sizeof(ops));
-		bool trk = false;
+		unsigned int trk = 0;
+		BitMap *lastOp = nullptr;
 
 		for (int i = 0; i < 4; ++i) {
 			rev::BOOL isTracked;
@@ -341,7 +360,8 @@ public :
 				if (isTracked) {
 					ops.operands[i] = (BitMap *)opVal;
 					ops.operands[i]->AddRef();
-					trk = true;
+					trk++;
+					lastOp = ops.operands[i];
 				} else {
 					bitMapZero->AddRef();
 					ops.operands[i] = bitMapZero;
@@ -357,7 +377,8 @@ public :
 				if (isTracked) {
 					ops.flags[i] = (BitMap *)opVal;
 					ops.flags[i]->AddRef();
-					trk = true;
+					trk++;
+					lastOp = ops.flags[i];
 				} else {
 					bitMapZero->AddRef();
 					ops.operands[i] = bitMapZero;
@@ -365,67 +386,96 @@ public :
 			}
 		}
 
-		if ((0 == (instruction->modifiers & RIVER_MODIFIER_EXT)) && (0x70 <= instruction->opCode) && (instruction->opCode < 0x80)) {
-			ExecuteJCC(instruction->opCode - 0x70, instruction);
+		if (0 == (instruction->modifiers & RIVER_MODIFIER_EXT)) {
+			if ((0x70 <= instruction->opCode) && (instruction->opCode < 0x80)) {
+				ExecuteJCC(instruction->opCode - 0x70, instruction, ops);
+			}
+
+			/*if (0xFF == instruction->opCode) {
+				if ((0x02 == instruction->subOpCode) || (0x04 == instruction->subOpCode)) {
+					ExecuteJMPOp(0, ops);
+				}
+			}*/
+		} else {
+			if ((0x80 <= instruction->opCode) && (instruction->opCode < 0x90)) {
+				ExecuteJCC(instruction->opCode - 0x80, instruction, ops);
+			}
 		}
 
 		if (trk) {
-			BitMap *ret = new BitMap(varCount, 1);
+			BitMap *ret = nullptr;
+			
+			if (1 == trk) {
+				lastOp->AddRef();
+				ret = lastOp;
+			} else {
+				ret = new BitMap(varCount, 1);
 
-			for (int i = 0; i < 4; ++i) {
-				if (ops.useOp[i]) {
-					ret->Union(*ops.operands[i]);
+				for (int i = 0; i < 4; ++i) {
+					if (ops.useOp[i]) {
+						ret->Union(*ops.operands[i]);
+					}
+				}
+
+				for (int i = 0; i < flagCount; ++i) {
+					if (ops.useFlag[i]) {
+						ret->Union(*ops.flags[i]);
+					}
 				}
 			}
 
-			for (int i = 0; i < flagCount; ++i) {
-				if (ops.useFlag[i]) {
-					ret->Union(*ops.flags[i]);
+			if (ret->IsZero()) {
+				for (int i = 0; i < 4; ++i) {
+					if (RIVER_SPEC_MODIFIES_OP(i) & instruction->specifiers) {
+						env->UnsetOperand(i);
+					}
 				}
-			}
 
-			for (int i = 0; i < 4; ++i) {
-				if (RIVER_SPEC_MODIFIES_OP(i) & instruction->specifiers) {
-					// this will leak a lot of memory
-					ret->AddRef();
-					env->SetOperand(i, ret);
+				for (int i = 0; i < flagCount; ++i) {
+					if (flagList[i] & instruction->modFlags) {
+						env->UnsetFlgValue(flagList[i]);
+					}
 				}
-			}
-
-			for (int i = 0; i < flagCount; ++i) {
-				if (flagList[i] & instruction->modFlags) {
-					// whis will also leak a lot of memory
-					ret->AddRef();
-					env->SetFlgValue(flagList[i], ret);
+			} else {
+				for (int i = 0; i < 4; ++i) {
+					if (RIVER_SPEC_MODIFIES_OP(i) & instruction->specifiers) {
+						// this will leak a lot of memory
+						//ret->AddRef();
+						env->SetOperand(i, ret);
+					}
 				}
-			}
 
-			for (int i = 0; i < 4; ++i) {
-				if (ops.useOp[i]) {
-					ops.operands[i]->DelRef();
+				for (int i = 0; i < flagCount; ++i) {
+					if (flagList[i] & instruction->modFlags) {
+						// whis will also leak a lot of memory
+						//ret->AddRef();
+						env->SetFlgValue(flagList[i], ret);
+					}
 				}
-			}
 
-			for (int i = 0; i < flagCount; ++i) {
-				if (ops.useFlag[i]) {
-					ops.flags[i]->DelRef();
+				for (int i = 0; i < 4; ++i) {
+					if (ops.useOp[i]) {
+						ops.operands[i]->DelRef();
+					}
+				}
+
+				for (int i = 0; i < flagCount; ++i) {
+					if (ops.useFlag[i]) {
+						ops.flags[i]->DelRef();
+					}
 				}
 			}
 
 			ret->DelRef();
 		} else {
-			// unset all modified operands
 			for (int i = 0; i < 4; ++i) {
 				if (RIVER_SPEC_MODIFIES_OP(i) & instruction->specifiers) {
-					// this will leak a lot of memory
 					env->UnsetOperand(i);
 				}
 			}
 
-			// unset all modified flags
 			for (int i = 0; i < flagCount; ++i) {
 				if (flagList[i] & instruction->modFlags) {
-					// whis will also leak a lot of memory
 					env->UnsetFlgValue(flagList[i]);
 				}
 			}
@@ -563,12 +613,15 @@ public :
 	}
 
 	virtual unsigned int ExecutionControl(void *ctx, void *address) {
+		rev::BasicBlockInfo bbInfo;
+		ctrl->GetLastBasicBlockInfo(ctx, &bbInfo);
+
 		const char unkmod[MAX_PATH] = "???";
-		unsigned int offset = (DWORD)address;
+		unsigned int offset = (DWORD)bbInfo.address;
 		int foundModule = -1;
 
 		for (int i = 0; i < mCount; ++i) {
-			if ((mInfo[i].ModuleBase <= (DWORD)address) && ((DWORD)address < mInfo[i].ModuleBase + mInfo[i].Size)) {
+			if ((mInfo[i].ModuleBase <= (DWORD)bbInfo.address) && ((DWORD)bbInfo.address < mInfo[i].ModuleBase + mInfo[i].Size)) {
 				offset -= mInfo[i].ModuleBase;
 				foundModule = i;
 				break;
@@ -595,12 +648,12 @@ public :
 		executor->condCount = 0;
 
 		if (binOut) {
-			blw->WriteEntry((-1 == foundModule) ? unkmod : mInfo[foundModule].Name, offset, ctrl->GetLastBasicBlockCost(ctx));
+			blw->WriteEntry((-1 == foundModule) ? unkmod : mInfo[foundModule].Name, offset, bbInfo.cost);
 		} else {
 			fprintf(fBlocks, "%-15s + %08lX (%4d)\n",
 				(-1 == foundModule) ? unkmod : mInfo[foundModule].Name,
 				(DWORD)offset,
-				ctrl->GetLastBasicBlockCost(ctx)
+				bbInfo.cost
 			);
 		}
 		return EXECUTION_ADVANCE;
@@ -608,6 +661,7 @@ public :
 
 	virtual unsigned int ExecutionEnd(void *ctx) {
 		fflush(fBlocks);
+		printf("BitMap instances: %d\n", BitMap::instCount);
 		return EXECUTION_TERMINATE;
 	}
 
