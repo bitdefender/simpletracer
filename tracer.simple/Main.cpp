@@ -244,11 +244,6 @@ int main(int argc, const char *argv[]) {
 		executionType = EXECUTION_EXTERNAL;
 	}
 
-	if (executionType != EXECUTION_INPROCESS) {
-		std::cout << "Only inprocess execution supported for now! Sorry!" << std::endl;
-		return 0;
-	}
-
 	ctrl = NewExecutionController(executionType);
 
 	if (opt.isSet("-h")) {
@@ -261,45 +256,49 @@ int main(int argc, const char *argv[]) {
 	std::string fModule;
 	opt.get("-p")->getString(fModule);
 	std::cout << "Using payload " << fModule << std::endl;
-	lib_t hModule = GET_LIB_HANDLER(fModule.c_str());
-	if (nullptr == hModule) {
-		std::cout << "Payload not found" << std::endl;
-		return 0;
-	}
+	if (executionType == EXECUTION_EXTERNAL)
+	std::cout << "Starting " << ((executionType == EXECUTION_EXTERNAL) ? "extern" : "internal") << " tracing on module " << fModule << "\n";
 
-	payloadBuffer = (char *)LOAD_PROC(hModule, "payloadBuffer");
-	Payload = (PayloadFunc)LOAD_PROC(hModule, "Payload");
+	if (executionType == EXECUTION_INPROCESS) {
+		lib_t hModule = GET_LIB_HANDLER(fModule.c_str());
+		if (nullptr == hModule) {
+			std::cout << "Payload not found" << std::endl;
+			return 0;
+		}
 
-	if ((nullptr == payloadBuffer) || (nullptr == Payload)) {
-		std::cout << "Payload imports not found" << std::endl;
-		return 0;
+		payloadBuffer = (char *)LOAD_PROC(hModule, "payloadBuffer");
+		Payload = (PayloadFunc)LOAD_PROC(hModule, "Payload");
+
+		if ((nullptr == payloadBuffer) || (nullptr == Payload)) {
+			std::cout << "Payload imports not found" << std::endl;
+			return 0;
+		}
+
+		char *buff = payloadBuffer;
+		unsigned int bSize = MAX_BUFF;
+		do {
+			fgets(buff, bSize, stdin);
+			while (*buff) {
+				buff++;
+				bSize--;
+			}
+		} while (!feof(stdin));
 	}
 
 	if (opt.isSet("--binlog")) {
 		observer.binOut = true;
 	}
 
-
 	std::string fName;
 	opt.get("-o")->getString(fName);
 	std::cout << "Writing " << (observer.binOut ? "binary" : "text") << " output to " << fName << std::endl;
-	
-	char *buff = payloadBuffer;
-	unsigned int bSize = MAX_BUFF;
-	do {
-		fgets(buff, bSize, stdin);
-		while (*buff) {
-			buff++;
-			bSize--;
-		}
-	} while (!feof(stdin));
 
 	FOPEN(observer.fBlocks, fName.c_str(), observer.binOut ? "wb" : "wt");
 
 	if (observer.binOut) {
 		observer.blw = new BinLogWriter(observer.fBlocks);
 	}
-		
+
 	if (opt.isSet("-m")) {
 		opt.get("-m")->getString(observer.patchFile);
 	}
@@ -307,12 +306,20 @@ int main(int argc, const char *argv[]) {
 	patch__rtld_global_ro();
 #endif
 
-	ctrl->SetEntryPoint((void*)Payload);
-	
+	if (executionType == EXECUTION_INPROCESS) {
+		ctrl->SetEntryPoint((void*)Payload);
+	} else if (executionType == EXECUTION_EXTERNAL) {
+		wchar_t ws[fModule.size() + 1];
+		std::mbstowcs(ws, fModule.c_str(), fModule.size() + 1);
+		std::cout << "Converted module name [" << fModule << "] to wstring [";
+		std::wcout << std::wstring(ws) << "]\n";
+		ctrl->SetPath(std::wstring(ws));
+	}
+
 	ctrl->SetExecutionFeatures(0);
 
 	ctrl->SetExecutionObserver(&observer);
-	
+
 	ctrl->Execute();
 
 	ctrl->WaitForTermination();
