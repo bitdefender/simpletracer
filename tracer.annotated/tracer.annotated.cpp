@@ -75,7 +75,8 @@ public :
 
 	void Union(const BitMap &rhs) {
 		if (((sz != rhs.sz) || (rw != rhs.rw)) && (rw != 1)) {
-			__asm int 3;
+			//__asm int 3;
+			DEBUG_BREAK;
 		}
 
 		printf("Selfunion ");
@@ -110,7 +111,8 @@ public :
 
 	BitMap(const BitMap &b1, const BitMap &b2) {
 		if (b1.sz != b2.sz) {
-			__asm int 3;
+			//__asm int 3;
+			DEBUG_BREAK;
 		}
 
 		Init(b1.sz, b1.rw + b2.rw);
@@ -187,7 +189,7 @@ public :
 	}
 
 	void Print() const {
-		printf("<%08p> ", this);
+		printf("<%08x> ", (unsigned int)this);
 		for (unsigned int i = 0; i < rw; ++i) {
 			for (unsigned int j = 0; j < ct; ++j) {
 				printf("%08x ", data[i * ct + j]);
@@ -258,7 +260,7 @@ public :
 		BitMap *ret = new BitMap(*bmp, 4 - (lsb >> 3) - (size >> 3), size >> 3);
 		printf("Extract ");
 		bmp->Print();
-		printf(" %d %d => ", 4 - (lsb >> 3) - (size >> 3), size >> 3);
+		printf(" %ld %ld => ", 4 - (lsb >> 3) - (size >> 3), size >> 3);
 		ret->Print();
 		printf("\n");
 		fflush(stdout);
@@ -345,7 +347,7 @@ public :
 
 		static const int flagCount = sizeof(flagList) / sizeof(flagList[0]);
 
-		printf("[%08x]\n", instruction->instructionAddress);
+		printf("[%08lx]\n", instruction->instructionAddress);
 
 		Operands ops;
 		memset(&ops, 0, sizeof(ops));
@@ -650,7 +652,7 @@ public :
 		if (binOut) {
 			blw->WriteEntry((-1 == foundModule) ? unkmod : mInfo[foundModule].Name, offset, bbInfo.cost);
 		} else {
-			fprintf(fBlocks, "%-15s + %08lX (%4d)\n",
+			fprintf(fBlocks, "%-15s + %08lX (%4ld)\n",
 				(-1 == foundModule) ? unkmod : mInfo[foundModule].Name,
 				(DWORD)offset,
 				bbInfo.cost
