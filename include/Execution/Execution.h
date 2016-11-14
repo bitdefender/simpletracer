@@ -8,24 +8,24 @@
 #if defined _WIN32 || defined __CYGWIN__
 	#ifdef _EXECUTION_EXPORTS
 		#ifdef __GNUC__
-			#define DLL_PUBLIC_EXECUTION __attribute__ ((dllexport))
+			#define DLL_EXECUTION_PUBLIC __attribute__ ((dllexport))
 		#else
-			#define DLL_PUBLIC_EXECUTION __declspec(dllexport)
+			#define DLL_EXECUTION_PUBLIC __declspec(dllexport)
 		#endif
 	#else
 		#ifdef __GNUC__
-			#define DLL_PUBLIC_EXECUTION __attribute__ ((dllimport))
+			#define DLL_EXECUTION_PUBLIC __attribute__ ((dllimport))
 		#else
-			#define DLL_PUBLIC_EXECUTION __declspec(dllimport)
+			#define DLL_EXECUTION_PUBLIC __declspec(dllimport)
 		#endif
 	#endif
 	#define DLL_LOCAL
 #else
 	#if __GNUC__ >= 4
-		#define DLL_PUBLIC_EXECUTION __attribute__ ((visibility ("default")))
+		#define DLL_EXECUTION_PUBLIC __attribute__ ((visibility ("default")))
 		#define DLL_LOCAL  __attribute__ ((visibility ("hidden")))
 	#else
-		#define DLL_PUBLIC_EXECUTION
+		#define DLL_EXECUTION_PUBLIC
 		#define DLL_LOCAL
 	#endif
 #endif
@@ -145,12 +145,12 @@ public:
 	// in-execution api
 	virtual void GetCurrentRegisters(void *ctx, rev::ExecutionRegs *registers) = 0;
 	virtual void *GetMemoryInfo(void *ctx, void *ptr) = 0;
-	virtual unsigned int GetLastBasicBlockCost(void *ctx) = 0;
+	virtual bool GetLastBasicBlockInfo(void *ctx, rev::BasicBlockInfo *bbInfo) = 0;
 	virtual void MarkMemoryValue(void *ctx, rev::ADDR_TYPE addr, rev::DWORD value) = 0;
 
 };
 
-DLL_PUBLIC_EXECUTION extern ExecutionController *NewExecutionController(uint32_t type);
-DLL_PUBLIC_EXECUTION extern void DeleteExecutionController(ExecutionController *);
+DLL_EXECUTION_PUBLIC extern ExecutionController *NewExecutionController(uint32_t type);
+DLL_EXECUTION_PUBLIC extern void DeleteExecutionController(ExecutionController *);
 
 #endif
