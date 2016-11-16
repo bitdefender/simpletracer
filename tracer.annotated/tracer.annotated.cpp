@@ -40,7 +40,7 @@ private :
 
 		refCount = 1;
 
-		printf("Create ");
+		printf("Create [%d,%d,%d]", sz, varCount, rw);
 		Print();
 		printf("\n");
 
@@ -147,6 +147,9 @@ public :
 	}
 
 	BitMap(const BitMap &o, unsigned int s, unsigned int c) {
+		if (o.sz > 4) {
+			DEBUG_BREAK;
+		}
 		Init(o.sz, c);
 
 		if (o.rw != 1) {
@@ -199,10 +202,12 @@ public :
 	}
 	
 	void AddRef() {
+		printf("AddRef <%08x>\n", (unsigned int )this);
 		refCount++;
 	}
 
 	void DelRef() {
+		printf("DelRef <%08x>\n", (unsigned int)this);
 		refCount--;
 		if (0 == refCount) {
 			printf("Delete ");
@@ -257,10 +262,11 @@ public :
 			return nullptr;
 		}
 
-		BitMap *ret = new BitMap(*bmp, 4 - (lsb >> 3) - (size >> 3), size >> 3);
 		printf("Extract ");
 		bmp->Print();
 		printf(" %ld %ld => ", 4 - (lsb >> 3) - (size >> 3), size >> 3);
+
+		BitMap *ret = new BitMap(*bmp, 4 - (lsb >> 3) - (size >> 3), size >> 3);
 		ret->Print();
 		printf("\n");
 		fflush(stdout);
@@ -347,7 +353,7 @@ public :
 
 		static const int flagCount = sizeof(flagList) / sizeof(flagList[0]);
 
-		printf("[%08lx]\n", instruction->instructionAddress);
+		//printf("[%08lx] %02x\n", instruction->instructionAddress, instruction->opCode);
 
 		Operands ops;
 		memset(&ops, 0, sizeof(ops));
@@ -441,16 +447,12 @@ public :
 			} else {
 				for (int i = 0; i < 4; ++i) {
 					if (RIVER_SPEC_MODIFIES_OP(i) & instruction->specifiers) {
-						// this will leak a lot of memory
-						//ret->AddRef();
 						env->SetOperand(i, ret);
 					}
 				}
 
 				for (int i = 0; i < flagCount; ++i) {
 					if (flagList[i] & instruction->modFlags) {
-						// whis will also leak a lot of memory
-						//ret->AddRef();
 						env->SetFlgValue(flagList[i], ret);
 					}
 				}
@@ -588,27 +590,26 @@ public :
 
 			PatchLibrary(fPatch);
 			fPatch.close();
+		}
 
-			if (!ctxInit) {
-				bitMapZero = new BitMap(varCount, 1);
+		if (!ctxInit) {
+			bitMapZero = new BitMap(varCount, 1);
 
-				revEnv = NewX86RevtracerEnvironment(ctx, ctrl); //new RevSymbolicEnvironment(ctx, ctrl);
-				regEnv = NewX86RegistersEnvironment(revEnv); //new OverlappedRegistersEnvironment();
-				executor = new TrackingExecutor(regEnv);
-				regEnv->SetExecutor(executor);
-				regEnv->SetReferenceCounting(AddReference, DelReference);
+			revEnv = NewX86RevtracerEnvironment(ctx, ctrl); //new RevSymbolicEnvironment(ctx, ctrl);
+			regEnv = NewX86RegistersEnvironment(revEnv); //new OverlappedRegistersEnvironment();
+			executor = new TrackingExecutor(regEnv);
+			regEnv->SetExecutor(executor);
+			regEnv->SetReferenceCounting(AddReference, DelReference);
 
-				for (unsigned int i = 0; i < varCount; ++i) {
-					char vname[8];
+			for (unsigned int i = 0; i < varCount; ++i) {
+				char vname[8];
 
-					sprintf(vname, "s[%d]", i);
+				sprintf(vname, "s[%d]", i);
 
-					revEnv->SetSymbolicVariable(vname, (rev::ADDR_TYPE)(&payloadBuffer[i]), 1);
-				}
-
-				ctxInit = true;
+				revEnv->SetSymbolicVariable(vname, (rev::ADDR_TYPE)(&payloadBuffer[i]), 1);
 			}
 
+			ctxInit = true;
 		}
 
 		return EXECUTION_ADVANCE;
