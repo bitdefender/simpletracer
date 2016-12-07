@@ -19,7 +19,7 @@ echo "Rebuilding the solution ..."
 (cd $BUILD_DIR && cmake $SRC_DIR -DCMAKE_INSTALL_PREFIX=$BUILD_DIR && cmake --build .)
 
 echo "Downloading the corpus ..." 
-CORPUS_DIR="$CWD/corpus"
+CORPUS_DIR="$CWD/corpus-libhttp"
 [ "$CORPUS_DIR" = "/" ] && { echo "Error: Interesting attempt to wipe the disk"; exit 1; }
 rm -rf $CORPUS_DIR
 mkdir $CORPUS_DIR
