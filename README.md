@@ -39,7 +39,7 @@ $ cd -
 ```
 $ cd ./build/bin
 $ export LD_LIBRARY_PATH=`pwd`/../lib
-$ ./tracer.simple --payload libhttp-parser.so < <input_test_case>
+$ ./simple_tracer --payload libhttp-parser.so < <input_test_case>
 ```
 
 **--payload** specifies the shared object that you want to trace. This must export the payload that is the tested sw entry point.
