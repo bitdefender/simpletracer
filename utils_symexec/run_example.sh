@@ -5,7 +5,12 @@
 
 cd ./build/bin
 export LD_LIBRARY_PATH=`pwd`/../lib
-./simple_tracer --payload libhttp-parser.so < ../../corpus-libhttp/CORPUS-01/faa8e7d7d6dd27276bac15183dcdfe43eae39633 
+
+files=(../../corpus-libhttp/CORPUS-01/*)
+testcase="${files[RANDOM % ${#files[@]}]}"
+
+printf "Using %s testcase.\n" "$testcase"
+./simple_tracer --payload libhttp-parser.so < $testcase
 
 executionLogFileName="execution.log"
 traceSimpleOutFileName="trace.simple.out"
@@ -13,3 +18,4 @@ traceSimpleOutFileName="trace.simple.out"
 echo ""
 du -h $executionLogFileName $traceSimpleOutFileName
 echo "execution.log and trace.simple.out can be found in build/bin/"
+
