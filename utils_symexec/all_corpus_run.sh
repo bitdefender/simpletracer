@@ -1,6 +1,11 @@
 #!/bin/bash
 #
-# Run simple_tracer for all the inputs from the corpus-libhttp/CORPUS-01/
+# Run simple_tracer for all the inputs from $LD_CORPUS_PATH.
+# 
+# $LD_LIBRARY_PATH, 
+# $LD_CORPUS_PATH, 
+# $LD_TRACES_PATH 
+# defined in stub_env_variables.sh
 #
 # Creates all_trace_simple_out/ which contains all traces.simple.out 
 # from all the testcases from the above corpus. 
@@ -10,25 +15,21 @@
 #         
 
 cd ./build/bin
-export LD_LIBRARY_PATH=`pwd`/../lib
 
-readonly PATH_TO_CORPUS='../../corpus-libhttp/CORPUS-01/'
-readonly PATH_TO_ALL_TRACES='all_trace_simple_out/'
-
-inputs=`ls $PATH_TO_CORPUS`
+inputs=`ls $LD_CORPUS_PATH`
 outputLogFileName=""
 inputName=""
 fileSize=0
 
-if [ ! -d $PATH_TO_ALL_TRACES ]; then
-  mkdir $PATH_TO_ALL_TRACES;
+if [ ! -d $LD_TRACES_PATH ]; then
+  mkdir $LD_TRACES_PATH;
 fi
 
 for input in $inputs
 do
-    inputName="$PATH_TO_CORPUS""$input"
+    inputName="$LD_CORPUS_PATH""$input"
     echo "Runing with input $inputName"
-    outputLogFileName="$PATH_TO_ALL_TRACES""$input""_out.txt"
+    outputLogFileName="$LD_TRACES_PATH""$input""_out.txt"
 
     ./simple_tracer \
         --payload libhttp-parser.so \
@@ -40,5 +41,5 @@ do
 done
 
 echo ""
-du -h $PATH_TO_ALL_TRACES
+du -h $LD_TRACES_PATH
 echo "Directory can be found in build/bin/"
