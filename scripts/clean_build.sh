@@ -19,10 +19,12 @@ echo "Rebuilding the solution ..."
 (cd $BUILD_DIR && cmake $SRC_DIR -DCMAKE_INSTALL_PREFIX=$BUILD_DIR -DRIVER_SDK_VERSION="$2" && cmake --build .)
 
 echo "Downloading the corpus ..." 
-CORPUS_DIR="$CWD/corpus-libhttp"
-[ "$CORPUS_DIR" = "/" ] && { echo "Error: Interesting attempt to wipe the disk"; exit 1; }
-rm -rf $CORPUS_DIR
-mkdir $CORPUS_DIR
-$CWD/simpletracer/libs.sh teodor-stoenescu simpletracer "$2" corpus-http-parser.zip $CORPUS_DIR/corpus.zip
-unzip $CORPUS_DIR/corpus.zip -d $CORPUS_DIR
-rm $CORPUS_DIR/corpus.zip
+for corpus in "libxml2" "http-parser"; do
+	CORPUS_DIR="$CWD/corpus-$corpus"
+	[ "$CORPUS_DIR" = "/" ] && { echo "Error: Interesting attempt to wipe the disk"; exit 1; }
+	rm -rf $CORPUS_DIR
+	mkdir $CORPUS_DIR
+	$CWD/simpletracer/libs.sh teodor-stoenescu simpletracer "$2" "corpus-$corpus.zip" "$CORPUS_DIR/corpus-$corpus.zip"
+	unzip "$CORPUS_DIR/corpus-$corpus.zip" -d $CORPUS_DIR
+	rm "$CORPUS_DIR/corpus-$corpus.zip"
+done
