@@ -165,9 +165,9 @@ public :
 } observer;
 
 #define MAX_BUFF 4096
-typedef int(*PayloadFunc)();
-char *payloadBuffer = nullptr;
-PayloadFunc Payload = nullptr;
+typedef int(*PayloadHandlerFunc)();
+char *payloadBuff = nullptr;
+PayloadHandlerFunc PayloadHandler = nullptr;
 
 struct CorpusItemHeader {
 	char fName[60];
@@ -290,15 +290,15 @@ int main(int argc, const char *argv[]) {
 	std::cout << "Using payload " << fModule << std::endl;
 	lib_t hModule = GET_LIB_HANDLER(fModule.c_str());
 	if (nullptr == hModule) {
-		std::cout << "Payload not found" << std::endl;
+		std::cout << "PayloadHandler not found" << std::endl;
 		return 0;
 	}
 
-	payloadBuffer = (char *)LOAD_PROC(hModule, "payloadBuffer");
-	Payload = (PayloadFunc)LOAD_PROC(hModule, "Payload");
+	payloadBuff = (char *)LOAD_PROC(hModule, "payloadBuffer");
+	PayloadHandler = (PayloadHandlerFunc)LOAD_PROC(hModule, "Payload");
 
-	if ((nullptr == payloadBuffer) || (nullptr == Payload)) {
-		std::cout << "Payload imports not found" << std::endl;
+	if ((nullptr == payloadBuff) || (nullptr == PayloadHandler)) {
+		std::cout << "PayloadHandler imports not found" << std::endl;
 		return 0;
 	}
 
@@ -323,7 +323,7 @@ int main(int argc, const char *argv[]) {
 	patch__rtld_global_ro();
 #endif
 
-	ctrl->SetEntryPoint((void*)Payload);
+	ctrl->SetEntryPoint((void*)PayloadHandler);
 	
 	ctrl->SetExecutionFeatures(0);
 
@@ -335,7 +335,7 @@ int main(int argc, const char *argv[]) {
 		while (!feof(stdin)) {
 			CorpusItemHeader header;
 			if ((1 == fread(&header, sizeof(header), 1, stdin)) &&
-					(header.size == fread(payloadBuffer, 1, header.size, stdin))) {
+					(header.size == fread(payloadBuff, 1, header.size, stdin))) {
 				std::cout << "Using " << header.fName << " as input file." << std::endl;
 
 				observer.fileName = header.fName;
@@ -346,7 +346,7 @@ int main(int argc, const char *argv[]) {
 		}
 
 	} else {
-		char *buff = payloadBuffer;
+		char *buff = payloadBuff;
 		unsigned int bSize = MAX_BUFF;
 		do {
 			fgets(buff, bSize, stdin);
