@@ -8,7 +8,7 @@ CPP_FILES := BinLog.cpp tracer.simple.cpp
 OBJ_FILES := BinLog.o tracer.simple.o
 LD_PATHS := -L$(makefile_dir)/../libs
 
-LD_FLAGS := -lexecution -lpthread -ldl -ldisablesse
+LD_FLAGS := -lexecution -lpthread -ldl
 CC_FLAGS_CROSS = -D__cdecl="" -D__stdcall="" -I../include/
 NO_SSE := -mno-mmx -mno-sse -march=i386
 CXX_FLAGS += -m32 $(NO_SSE) -std=c++11 $(CC_FLAGS_CROSS)
