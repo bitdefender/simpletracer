@@ -8,7 +8,6 @@
 #define LIB_EXT ".dll"
 #else
 #define LIB_EXT ".so"
-extern "C" void patch__rtld_global_ro();
 #endif
 
 ExecutionController *ctrl = NULL;
@@ -319,9 +318,6 @@ int main(int argc, const char *argv[]) {
 	if (opt.isSet("-m")) {
 		opt.get("-m")->getString(observer.patchFile);
 	}
-#ifdef __linux__
-	patch__rtld_global_ro();
-#endif
 
 	ctrl->SetEntryPoint((void*)PayloadHandler);
 	
