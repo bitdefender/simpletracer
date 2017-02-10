@@ -21,6 +21,9 @@ echo "Rebuilding the solution ..."
 echo "Downloading the corpus ..." 
 for corpus in "libxml2" "http-parser"; do
 	CORPUS_DIR="$CWD/corpus-$corpus"
+	if [ -d $CORPUS_DIR ]; then
+		continue
+	fi
 	[ "$CORPUS_DIR" = "/" ] && { echo "Error: Interesting attempt to wipe the disk"; exit 1; }
 	rm -rf $CORPUS_DIR
 	mkdir $CORPUS_DIR
