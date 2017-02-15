@@ -15,7 +15,6 @@
 #define LIB_EXT ".dll"
 #else
 #define LIB_EXT ".so"
-extern "C" void patch__rtld_global_ro();
 #endif
 
 ExecutionController *ctrl = NULL;
@@ -164,9 +163,9 @@ public :
 } observer;
 
 #define MAX_BUFF 4096
-typedef int(*PayloadFunc)();
-char *payloadBuffer = nullptr;
-PayloadFunc Payload = nullptr;
+typedef int(*PayloadHandlerFunc)();
+char *payloadBuff = nullptr;
+PayloadHandlerFunc PayloadHandler = nullptr;
 
 struct CorpusItemHeader {
 	char fName[60];
@@ -334,9 +333,6 @@ int main(int argc, const char *argv[]) {
 	if (opt.isSet("-m")) {
 		opt.get("-m")->getString(observer.patchFile);
 	}
-#ifdef __linux__
-	patch__rtld_global_ro();
-#endif
 
 	if (executionType == EXECUTION_INPROCESS) {
 		ctrl->SetEntryPoint((void*)Payload);
@@ -358,7 +354,7 @@ int main(int argc, const char *argv[]) {
 		while (!feof(stdin)) {
 			CorpusItemHeader header;
 			if ((1 == fread(&header, sizeof(header), 1, stdin)) &&
-					(header.size == fread(payloadBuffer, 1, header.size, stdin))) {
+					(header.size == fread(payloadBuff, 1, header.size, stdin))) {
 				std::cout << "Using " << header.fName << " as input file." << std::endl;
 
 				observer.fileName = header.fName;
@@ -369,7 +365,7 @@ int main(int argc, const char *argv[]) {
 		}
 
 	} else {
-		char *buff = payloadBuffer;
+		char *buff = payloadBuff;
 		unsigned int bSize = MAX_BUFF;
 		do {
 			fgets(buff, bSize, stdin);

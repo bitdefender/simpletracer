@@ -30,6 +30,9 @@ namespace stk {
 		LargeStack(DWORD *base, DWORD size, DWORD *top, char *fName);
 		~LargeStack();
 
+		void Push(DWORD value);
+		DWORD Pop();
+
 		void Update();
 	};
 };
