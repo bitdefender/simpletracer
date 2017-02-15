@@ -1,5 +1,12 @@
 #include "ezOptionParser.h"
-#include "BinLog.h"
+
+#include "AbstractLog.h"
+
+#include "BinFormat.h"
+#include "TextFormat.h"
+
+#include "FileLog.h"
+
 #include "Execution/Execution.h"
 #include "CommonCrossPlatform/Common.h"
 
@@ -15,10 +22,12 @@ ExecutionController *ctrl = NULL;
 
 class CustomObserver : public ExecutionObserver {
 public :
-	FILE *fBlocks;
 	bool binOut;
 
-	BinLogWriter *blw;
+	//BinLogWriter *blw;
+
+	AbstractLog *aLog;
+	AbstractFormat *aFormat;
 
 	std::string patchFile;
 	ModuleInfo *mInfo;
@@ -104,13 +113,10 @@ public :
 
 		}
 
-		if (binOut) {
-			//blw->WriteEntry((-1 == foundModule) ? unkmod : mInfo[foundModule].Name, offset, ctrl->GetLastBasicBlockCost(ctx));
+		rev::BasicBlockInfo bbInfo;
+		ctrl->GetLastBasicBlockInfo(ctx, &bbInfo);
 
-		}
-		else {
-			fprintf(fBlocks, "## %s ##\n", fileName.c_str());
-		}
+		aFormat->WriteTestName(fileName.c_str());
 
 		return EXECUTION_ADVANCE;
 	}
@@ -132,35 +138,28 @@ public :
 		}
 
 
-		if (binOut) {
-			blw->WriteEntry((-1 == foundModule) ? unkmod : mInfo[foundModule].Name, offset, bbInfo.cost);
-		} else {
-			fprintf(fBlocks, "%-15s + %08lX (%4ld)\n",
-				(-1 == foundModule) ? unkmod : mInfo[foundModule].Name,
-				(DWORD)offset,
-				bbInfo.cost
-			);
-		}
+		aFormat->WriteBasicBlock(
+			(-1 == foundModule) ? unkmod : mInfo[foundModule].Name,
+			offset,
+			bbInfo.cost,
+			0
+		);
+
 		return EXECUTION_ADVANCE;
 	}
 
 	virtual unsigned int ExecutionEnd(void *ctx) {
-		fflush(fBlocks);
+		//fflush(fBlocks);
 		return EXECUTION_TERMINATE;
 	}
 
 	CustomObserver() {
-		fBlocks = nullptr;
 		binOut = false;
-
-		blw = nullptr;
 	}
 
 	~CustomObserver() {
-		if (nullptr != blw) {
-			delete blw;
-			blw = nullptr;
-		}
+		delete aLog;
+		delete aFormat;
 	}
 } observer;
 
@@ -319,10 +318,17 @@ int main(int argc, const char *argv[]) {
 	std::string fName;
 	opt.get("-o")->getString(fName);
 	std::cout << "Writing " << (observer.binOut ? "binary" : "text") << " output to " << fName << std::endl;
-	FOPEN(observer.fBlocks, fName.c_str(), observer.binOut ? "wb" : "wt");
+	//FOPEN(observer.fBlocks, fName.c_str(), observer.binOut ? "wb" : "wt");
+
+	FileLog *flog = new FileLog();
+	flog->SetLogFileName(fName.c_str());
+	observer.aLog = flog;
 
 	if (observer.binOut) {
-		observer.blw = new BinLogWriter(observer.fBlocks);
+		//observer.blw = new BinLogWriter(observer.fBlocks);
+		observer.aFormat = new BinFormat(observer.aLog);
+	} else {
+		observer.aFormat = new TextFormat(observer.aLog);
 	}
 
 	if (opt.isSet("-m")) {
@@ -335,7 +341,7 @@ int main(int argc, const char *argv[]) {
 	if (executionType == EXECUTION_INPROCESS) {
 		ctrl->SetEntryPoint((void*)Payload);
 	} else if (executionType == EXECUTION_EXTERNAL) {
-		wchar_t ws[fModule.size() + 1];
+		wchar_t ws[4096];
 		std::mbstowcs(ws, fModule.c_str(), fModule.size() + 1);
 		std::cout << "Converted module name [" << fModule << "] to wstring [";
 		std::wcout << std::wstring(ws) << "]\n";
@@ -382,6 +388,5 @@ int main(int argc, const char *argv[]) {
 	DeleteExecutionController(ctrl);
 	ctrl = NULL;
 
-	fclose(observer.fBlocks);
 	return 0;
 }
