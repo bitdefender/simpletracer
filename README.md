@@ -16,42 +16,30 @@ GITHUB_API_TOKEN=<your_github_api_token>
 ## 1. get sources
 
 ```
+$ mkdir symexec
+$ cd symexec
 $ git clone https://github.com/teodor-stoenescu/simpletracer.git
-$ cd simpletracer
 ```
-Before building you must bring in some dependencies, this is all automated.
-First install some dependent packages (this requires root priviledges)
+## 2. environment setup
 
 ```
-$ make deps
-<type your account password; you must be on the sudoers list>
+$ ln -s  `readlink -f ./simpletracer/scripts/clean_build.sh` clean_build.sh
 ```
 
-Next you must download the river binary component
+## 3. build
 
 ```
-$ make libs
-```
-
-## 2. build
-```
-$ make clean && make
-```
-If this step faces errors, the cause is probably related to the github token. 
-
-Workaround:
-- download `libs.zip` from the latest <i>release</i> and unzip it in `simpletracer/`. 
-
-## 3. install
-```
-$ make install prefix=`pwd`/inst
+$ ./clean_build.sh master 0.0.2
+$ cd build
+$ cmake --build .
+$ cd -
 ```
 
 ## 4. run
 ```
-$ cd ./inst/bin
+$ cd ./build/bin
 $ export LD_LIBRARY_PATH=`pwd`/../lib
-$ ./tracer.simple --payload libhttp-parser.so < <input_test_case>
+$ ./simple_tracer --payload libhttp-parser.so < <input_test_case>
 ```
 
 **--payload** specifies the shared object that you want to trace. This must export the payload that is the tested sw entry point.
