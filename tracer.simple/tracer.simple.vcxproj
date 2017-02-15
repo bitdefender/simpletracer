@@ -124,12 +124,18 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="BinLog.cpp" />
+    <ClCompile Include="AbstractLog.cpp" />
+    <ClCompile Include="BinFormat.cpp" />
+    <ClCompile Include="FileLog.cpp" />
+    <ClCompile Include="TextFormat.cpp" />
     <ClCompile Include="tracer.simple.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="BinLog.h" />
+    <ClInclude Include="AbstractLog.h" />
+    <ClInclude Include="BinFormat.h" />
     <ClInclude Include="ezOptionParser.h" />
+    <ClInclude Include="FileLog.h" />
+    <ClInclude Include="TextFormat.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
