@@ -3,6 +3,8 @@
 
 #include <stdio.h>
 
+// TODO: maybe this code should be shared between tracer.annotated and tracer.simple
+
 #define ENTRY_TYPE_BASIC_BLOCK 0x000000BB
 
 struct BinLogEntry {
@@ -23,6 +25,8 @@ private:
 public:
 	BinLogWriter(FILE *log);
 	bool WriteEntry(const char *module, unsigned int offset, unsigned int cost);
+
+	void ExecutionEnd() { if (fLog) fflush(fLog);}
 };
 
 #endif

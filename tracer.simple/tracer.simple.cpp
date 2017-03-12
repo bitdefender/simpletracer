@@ -2,6 +2,7 @@
 #include "BinLog.h"
 #include "Execution/Execution.h"
 #include "CommonCrossPlatform/Common.h"
+#include <stdarg.h>
 
 #ifdef _WIN32
 #include <Windows.h>
@@ -11,6 +12,24 @@
 #endif
 
 ExecutionController *ctrl = NULL;
+
+static bool gIsLogEnabled = false;
+void Log( const char * format, ... )
+{
+  if (!gIsLogEnabled)
+  	return;
+  
+  static const int buffSz = 2048;
+  static char buffer[buffSz];
+  va_list args;
+  va_start (args, format);
+  vsnprintf (buffer,buffSz,format, args);
+  perror (buffer);
+  va_end (args);
+
+  printf("%s", buffer);
+}
+
 
 class CustomObserver : public ExecutionObserver {
 public :
@@ -26,7 +45,7 @@ public :
 	std::string fileName;
 
 	virtual void TerminationNotification(void *ctx) {
-		printf("Process Terminated\n");
+		Log("Process Terminated\n");
 	}
 
 	unsigned int GetModuleOffset(const std::string &module) const {
@@ -85,7 +104,7 @@ public :
 	}
 
 	virtual unsigned int ExecutionBegin(void *ctx, void *address) {
-		printf("Process starting\n");
+		Log("Process starting\n");
 		ctrl->GetModules(mInfo, mCount);
 
 		if (!patchFile.empty()) {
@@ -94,7 +113,7 @@ public :
 			fPatch.open(patchFile);
 			
 			if (!fPatch.good()) {
-				std::cout << "Patch file not found" << std::endl;
+				Log("Patch file not found\n");
 				return EXECUTION_TERMINATE;
 			}
 
@@ -144,7 +163,14 @@ public :
 	}
 
 	virtual unsigned int ExecutionEnd(void *ctx) {
-		fflush(fBlocks);
+		if (binOut)
+		{
+			blw->ExecutionEnd();
+		}
+		else
+		{
+			fflush(fBlocks);
+		}
 		return EXECUTION_TERMINATE;
 	}
 
@@ -152,7 +178,7 @@ public :
 		fBlocks = nullptr;
 		binOut = false;
 
-		blw = nullptr;
+		blw = nullptr;	
 	}
 
 	~CustomObserver() {
@@ -187,6 +213,15 @@ int main(int argc, const char *argv[]) {
 		0,
 		"Use inprocess execution.",
 		"--inprocess"
+	);
+
+	opt.add(
+		"",
+		0,
+		0,
+		0,
+		"Disable logs",
+		"--disableLogs"
 	);
 
 	opt.add(
@@ -262,7 +297,7 @@ int main(int argc, const char *argv[]) {
 	uint32_t executionType = EXECUTION_INPROCESS;
 
 	if (opt.isSet("--inprocess") && opt.isSet("--extern")) {
-		std::cout << "Conflicting options --inprocess and --extern" << std::endl;
+		Log("Conflicting options --inprocess and --extern\n");
 		return 0;
 	}
 
@@ -271,7 +306,7 @@ int main(int argc, const char *argv[]) {
 	}
 
 	if (executionType != EXECUTION_INPROCESS) {
-		std::cout << "Only inprocess execution supported for now! Sorry!" << std::endl;
+		Log("Only inprocess execution supported for now! Sorry!\n");
 		return 0;
 	}
 
@@ -280,16 +315,16 @@ int main(int argc, const char *argv[]) {
 	if (opt.isSet("-h")) {
 		std::string usage;
 		opt.getUsage(usage);
-		std::cout << usage;
+		printf("%s", usage.c_str());
 		return 0;
 	}
 
 	std::string fModule;
 	opt.get("-p")->getString(fModule);
-	std::cout << "Using payload " << fModule << std::endl;
+	Log("Using payload %s\n", fModule.c_str());
 	lib_t hModule = GET_LIB_HANDLER(fModule.c_str());
 	if (nullptr == hModule) {
-		std::cout << "PayloadHandler not found" << std::endl;
+		Log("PayloadHandler not found\n");
 		return 0;
 	}
 
@@ -297,7 +332,7 @@ int main(int argc, const char *argv[]) {
 	PayloadHandler = (PayloadHandlerFunc)LOAD_PROC(hModule, "Payload");
 
 	if ((nullptr == payloadBuff) || (nullptr == PayloadHandler)) {
-		std::cout << "PayloadHandler imports not found" << std::endl;
+		Log("PayloadHandler imports not found\n");
 		return 0;
 	}
 
@@ -305,13 +340,25 @@ int main(int argc, const char *argv[]) {
 		observer.binOut = true;
 	}
 
+	if (opt.isSet("--disableLogs")) {
+		gIsLogEnabled = false;
+	}
 
 	std::string fName;
 	opt.get("-o")->getString(fName);
-	std::cout << "Writing " << (observer.binOut ? "binary" : "text") << " output to " << fName << std::endl;
-	FOPEN(observer.fBlocks, fName.c_str(), observer.binOut ? "wb" : "wt");
+	if (strcmp(fName.c_str(), "stdout") == 0)
+	{
+		Log("Writing to stdout\n");
+		observer.fBlocks = stdout;
+	}
+	else
+	{
+		Log("Writing %s output to %s\n", observer.binOut ? "binary" : "text", fName);
+		FOPEN(observer.fBlocks, fName.c_str(), observer.binOut ? "wb" : "wt");
+	}
 
-	if (observer.binOut) {
+	const bool isBinaryOutput = observer.binOut;
+	if (isBinaryOutput) {
 		observer.blw = new BinLogWriter(observer.fBlocks);
 	}
 		
@@ -332,7 +379,7 @@ int main(int argc, const char *argv[]) {
 			CorpusItemHeader header;
 			if ((1 == fread(&header, sizeof(header), 1, stdin)) &&
 					(header.size == fread(payloadBuff, 1, header.size, stdin))) {
-				std::cout << "Using " << header.fName << " as input file." << std::endl;
+				Log("Using %s as input file\n", header.fName);
 
 				observer.fileName = header.fName;
 

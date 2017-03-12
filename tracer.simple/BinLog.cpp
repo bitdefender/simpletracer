@@ -23,8 +23,7 @@ bool BinLogWriter::WriteEntry(const char *module, unsigned int offset, unsigned 
 	if (ble.modNameLength) {
 		fwrite(module, 1, ble.modNameLength, fLog);
 	}
-
-	fflush(fLog);
+	
 	return true;
 }
 

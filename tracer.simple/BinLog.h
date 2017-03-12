@@ -23,6 +23,8 @@ private:
 public:
 	BinLogWriter(FILE *log);
 	bool WriteEntry(const char *module, unsigned int offset, unsigned int cost);
+
+	void ExecutionEnd() { if (fLog) fflush(fLog);}
 };
 
 #endif
