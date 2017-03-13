@@ -199,6 +199,24 @@ struct CorpusItemHeader {
 	unsigned int size;
 };
 
+// Read a payload buffer from a file and execute
+void ReadFromFileAndExecute(FILE* inputFile)
+{
+	char *buff = payloadBuff;
+	unsigned int bSize = MAX_BUFF;
+	do {
+		fgets(buff, bSize, inputFile);
+		while (*buff) {
+			buff++;
+			bSize--;
+		}
+	} while (!feof(inputFile));
+
+	observer.fileName = "stdin";
+
+	ctrl->Execute();
+}
+
 int main(int argc, const char *argv[]) {
 	ez::ezOptionParser opt;
 
@@ -270,6 +288,15 @@ int main(int argc, const char *argv[]) {
 		0,
 		"Use a corpus file instead of individual inputs.",
 		"--batch"
+	);
+
+	opt.add(
+		"",
+		false,
+		0,
+		0,
+		"Use this to create a flow of input payload- trace output. Input is fed from a different process",
+		"--flow"
 	);
 
 	opt.add(
@@ -388,20 +415,45 @@ int main(int argc, const char *argv[]) {
 			}
 		}
 
-	} else {
-		char *buff = payloadBuff;
-		unsigned int bSize = MAX_BUFF;
-		do {
-			fgets(buff, bSize, stdin);
-			while (*buff) {
-				buff++;
-				bSize--;
+	} 
+	else if (opt.isSet("--flow")) {
+		// Input protocol [payload input Size  |  [task_op | payload - if taskOp == E_NEXT_OP_TASK]+ ]
+		// Expecting the size of each task first then the stream of tasks
+		unsigned int payloadInputSizePerTask = -1;
+		fread(&payloadInputSizePerTask, sizeof(payloadInputSizePerTask), 1, stdin);		
+		
+		printf ("sz %d \n", payloadInputSizePerTask);
+		//fprintf(stdout, "teeest");
+		//fflush(stdout);
+#if 1
+		enum FlowOpCode
+		{
+			E_NEXTOP_CLOSE,
+			E_NEXTOP_TASK
+		};
+
+		FlowOpCode nextOp = E_NEXTOP_TASK;
+		while(true)
+		{
+			fread(&nextOp, sizeof(char), 1, stdin);
+			printf ("next op code %d\n" , nextOp);
+
+			if (nextOp == E_NEXTOP_CLOSE) {
+				printf ("stopping");
+				break;
+			} 
+			else if (nextOp == E_NEXTOP_TASK){
+				printf("executing a new task");
+				ReadFromFileAndExecute(stdin);
 			}
-		} while (!feof(stdin));
-
-		observer.fileName = "stdin";
-
-		ctrl->Execute();
+			else{
+				printf("invalid next op value !! probably the data stream is corrupted]");
+			}
+		}
+#endif
+	}
+	else {
+		ReadFromFileAndExecute(stdin);
 		ctrl->WaitForTermination();
 	}
 
