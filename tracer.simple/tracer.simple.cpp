@@ -12,6 +12,7 @@
 #endif
 
 ExecutionController *ctrl = NULL;
+bool writeEverythingOnASingleline = false;
 
 static bool gIsLogEnabled = false;
 void Log( const char * format, ... )
@@ -28,6 +29,7 @@ void Log( const char * format, ... )
   va_end (args);
 
   printf("%s", buffer);
+  fflush(stdout);
 }
 
 
@@ -127,7 +129,8 @@ public :
 
 		}
 		else {
-			fprintf(fBlocks, "## %s ##\n", fileName.c_str());
+			fprintf(fBlocks, "## %s ##", fileName.c_str());
+			fprintf(fBlocks, writeEverythingOnASingleline ? "&" : "\n");
 		}
 
 		return EXECUTION_ADVANCE;
@@ -153,11 +156,13 @@ public :
 		if (binOut) {
 			blw->WriteEntry((-1 == foundModule) ? unkmod : mInfo[foundModule].Name, offset, bbInfo.cost);
 		} else {
-			fprintf(fBlocks, "%-15s + %08lX (%4ld)\n",
+			fprintf(fBlocks, "%-15s + %08lX (%4ld)",
 				(-1 == foundModule) ? unkmod : mInfo[foundModule].Name,
 				(DWORD)offset,
 				bbInfo.cost
 			);
+
+			fprintf(fBlocks, writeEverythingOnASingleline ? "&" : "\n");
 		}
 		return EXECUTION_ADVANCE;
 	}
@@ -169,6 +174,7 @@ public :
 		}
 		else
 		{
+			fprintf(fBlocks, "\n"); // Writing a character that means for other processes the end of output from test. If this breaks someone else functionality then do this only for "--flow" option
 			fflush(fBlocks);
 		}
 		return EXECUTION_TERMINATE;
@@ -200,21 +206,31 @@ struct CorpusItemHeader {
 };
 
 // Read a payload buffer from a file and execute
-void ReadFromFileAndExecute(FILE* inputFile)
+void ReadFromFileAndExecute(FILE* inputFile, int sizeToRead = -1)
 {
+	const bool readUntilEOF = sizeToRead == -1;
 	char *buff = payloadBuff;
 	unsigned int bSize = MAX_BUFF;
 	do {
-		fgets(buff, bSize, inputFile);
+		if (readUntilEOF)
+		{
+			fgets(buff, bSize, inputFile);
+		}
+		else
+		{
+			fread(buff, sizeof(char), sizeToRead, inputFile);
+		}
+
 		while (*buff) {
 			buff++;
 			bSize--;
 		}
-	} while (!feof(inputFile));
+	} while (!feof(inputFile) && readUntilEOF);
 
 	observer.fileName = "stdin";
 
 	ctrl->Execute();
+	ctrl->WaitForTermination();
 }
 
 int main(int argc, const char *argv[]) {
@@ -419,12 +435,12 @@ int main(int argc, const char *argv[]) {
 	else if (opt.isSet("--flow")) {
 		// Input protocol [payload input Size  |  [task_op | payload - if taskOp == E_NEXT_OP_TASK]+ ]
 		// Expecting the size of each task first then the stream of tasks
+		//printf("starging \n");
+		writeEverythingOnASingleline = true;
+
 		unsigned int payloadInputSizePerTask = -1;
-		fread(&payloadInputSizePerTask, sizeof(payloadInputSizePerTask), 1, stdin);		
-		
-		printf ("sz %d \n", payloadInputSizePerTask);
-		//fprintf(stdout, "teeest");
-		//fflush(stdout);
+		fread(&payloadInputSizePerTask, sizeof(payloadInputSizePerTask), 1, stdin);				
+		Log ("size of payload %d \n", payloadInputSizePerTask);
 #if 1
 		enum FlowOpCode
 		{
@@ -436,19 +452,20 @@ int main(int argc, const char *argv[]) {
 		while(true)
 		{
 			fread(&nextOp, sizeof(char), 1, stdin);
-			printf ("next op code %d\n" , nextOp);
-
-			if (nextOp == E_NEXTOP_CLOSE) {
-				printf ("stopping");
+			Log("NNext op code %d\n" , nextOp);
+			
+			if (nextOp == 0) {
+				Log("Stopping");
 				break;
 			} 
-			else if (nextOp == E_NEXTOP_TASK){
-				printf("executing a new task");
-				ReadFromFileAndExecute(stdin);
+			else if (nextOp == 1){
+				Log("executing a new task\n");
+				ReadFromFileAndExecute(stdin, payloadInputSizePerTask);
 			}
 			else{
-				printf("invalid next op value !! probably the data stream is corrupted]");
-			}
+				Log("invalid next op value !! probably the data stream is corrupted\n");
+				break;
+			}			
 		}
 #endif
 	}
@@ -456,7 +473,6 @@ int main(int argc, const char *argv[]) {
 		ReadFromFileAndExecute(stdin);
 		ctrl->WaitForTermination();
 	}
-
 	DeleteExecutionController(ctrl);
 	ctrl = NULL;
 
