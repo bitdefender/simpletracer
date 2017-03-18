@@ -14,7 +14,7 @@
 ExecutionController *ctrl = NULL;
 bool writeEverythingOnASingleline = false;
 
-static bool gIsLogEnabled = false;
+static bool gIsLogEnabled = true;
 void Log( const char * format, ... )
 {
   if (!gIsLogEnabled)
@@ -125,6 +125,7 @@ public :
 		}
 
 		if (binOut) {
+			blw->ExecutionBegin();
 			//blw->WriteEntry((-1 == foundModule) ? unkmod : mInfo[foundModule].Name, offset, ctrl->GetLastBasicBlockCost(ctx));
 
 		}
@@ -164,10 +165,11 @@ public :
 
 			fprintf(fBlocks, writeEverythingOnASingleline ? "&" : "\n");
 		}
+
 		return EXECUTION_ADVANCE;
 	}
 
-	virtual unsigned int ExecutionEnd(void *ctx) {
+	virtual unsigned int ExecutionEnd(void *ctx) {		
 		if (binOut)
 		{
 			blw->ExecutionEnd();
@@ -396,13 +398,14 @@ int main(int argc, const char *argv[]) {
 	}
 	else
 	{
-		Log("Writing %s output to %s\n", observer.binOut ? "binary" : "text", fName);
+		Log("Writing %s output to %s\n", observer.binOut ? "binary" : "text", fName.c_str());
 		FOPEN(observer.fBlocks, fName.c_str(), observer.binOut ? "wb" : "wt");
 	}
 
 	const bool isBinaryOutput = observer.binOut;
+	const bool isInFlowMode   = opt.isSet("--flow");
 	if (isBinaryOutput) {
-		observer.blw = new BinLogWriter(observer.fBlocks);
+		observer.blw = new BinLogWriter(observer.fBlocks, isInFlowMode);
 	}
 		
 	if (opt.isSet("-m")) {
@@ -432,7 +435,7 @@ int main(int argc, const char *argv[]) {
 		}
 
 	} 
-	else if (opt.isSet("--flow")) {
+	else if (isInFlowMode) {
 		// Input protocol [payload input Size  |  [task_op | payload - if taskOp == E_NEXT_OP_TASK]+ ]
 		// Expecting the size of each task first then the stream of tasks
 		//printf("starging \n");
@@ -441,7 +444,7 @@ int main(int argc, const char *argv[]) {
 		unsigned int payloadInputSizePerTask = -1;
 		fread(&payloadInputSizePerTask, sizeof(payloadInputSizePerTask), 1, stdin);				
 		Log ("size of payload %d \n", payloadInputSizePerTask);
-#if 1
+
 		enum FlowOpCode
 		{
 			E_NEXTOP_CLOSE,
@@ -467,7 +470,6 @@ int main(int argc, const char *argv[]) {
 				break;
 			}			
 		}
-#endif
 	}
 	else {
 		ReadFromFileAndExecute(stdin);
