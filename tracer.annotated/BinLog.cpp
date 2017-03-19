@@ -33,11 +33,8 @@ bool BinLogWriter::WriteEntry(const char *module, unsigned int offset, unsigned 
 	ble.bbOffset = offset;
 	ble.bbCost = cost;
 
-	char dummy[4] ="new";
 	if (!bufferingEntries)
-	{
-		fwrite(dummy, sizeof(char), 4, fLog);
-
+	{						
 		fwrite(&ble, sizeof(ble), 1, fLog);
 		if (ble.modNameLength) {
 			fwrite(module, 1, ble.modNameLength, fLog);
@@ -51,14 +48,12 @@ bool BinLogWriter::WriteEntry(const char *module, unsigned int offset, unsigned 
 			exit(1);
 		}
 
-		memcpy(&bufferEntries[bufferHeaderPos], sizeof(char), 4);
-
 		memcpy(&bufferEntries[bufferHeaderPos], &ble, sizeof(ble));
 		bufferHeaderPos += sizeof(ble);
 
 		if (ble.modNameLength) {
-			memcpy(&bufferEntries[bufferHeaderPos], module, ble.modNameLength);
-			bufferHeaderPos += ble.modNameLength;
+			memcpy(&bufferEntries[bufferHeaderPos], module, ble.modNameLength*sizeof(char));
+			bufferHeaderPos += ble.modNameLength*sizeof(char);
 		}
 	}
 	
@@ -68,13 +63,14 @@ bool BinLogWriter::WriteEntry(const char *module, unsigned int offset, unsigned 
 void BinLogWriter::ExecutionEnd()
 {
 	// If using buffer mode, write it to stdout
-	if !bufferEntries) { 
+	if (!bufferEntries) { 
 		if (fLog) {
 			fflush(fLog);
 		}
 	}
 	else {
-		if (fLog) {
+		if (fLog) {	
+			// Write the total number of bytes of the output buffer, then the buffered data
 			const size_t totalSizeToWrite = sizeof(bufferEntries[0]) * bufferHeaderPos;
 			fwrite(&totalSizeToWrite, sizeof(totalSizeToWrite), 1, fLog);
 			fwrite(bufferEntries, sizeof(bufferEntries[0]), bufferHeaderPos, fLog);

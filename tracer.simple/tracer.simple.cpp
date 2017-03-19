@@ -304,6 +304,15 @@ int main(int argc, const char *argv[]) {
 		false,
 		0,
 		0,
+		"When using binlog, buffer everything before writing the result",
+		"--binbuffered"
+	);
+
+	opt.add(
+		"",
+		false,
+		0,
+		0,
 		"Use a corpus file instead of individual inputs.",
 		"--batch"
 	);
@@ -338,6 +347,11 @@ int main(int argc, const char *argv[]) {
 	);
 
 	opt.parse(argc, argv);
+
+	// Don't write logs before this check
+	if (opt.isSet("--disableLogs")) {
+		gIsLogEnabled = false;
+	}
 
 	uint32_t executionType = EXECUTION_INPROCESS;
 
@@ -379,14 +393,13 @@ int main(int argc, const char *argv[]) {
 	if ((nullptr == payloadBuff) || (nullptr == PayloadHandler)) {
 		Log("PayloadHandler imports not found\n");
 		return 0;
-	}
+	}		
 
-	if (opt.isSet("--binlog")) {
+	const bool isBinaryOutput = opt.isSet("--binlog");
+	const bool isBinBuffered  = opt.isSet("--binbuffered");
+
+	if (isBinaryOutput) {
 		observer.binOut = true;
-	}
-
-	if (opt.isSet("--disableLogs")) {
-		gIsLogEnabled = false;
 	}
 
 	std::string fName;
@@ -398,14 +411,12 @@ int main(int argc, const char *argv[]) {
 	}
 	else
 	{
-		Log("Writing %s output to %s\n", observer.binOut ? "binary" : "text", fName.c_str());
+		Log("Writing %s output to %s. Is buffered ? %d\n", observer.binOut ? "binary" : "text", fName.c_str(), (int)isBinBuffered);
 		FOPEN(observer.fBlocks, fName.c_str(), observer.binOut ? "wb" : "wt");
 	}
 
-	const bool isBinaryOutput = observer.binOut;
-	const bool isInFlowMode   = opt.isSet("--flow");
 	if (isBinaryOutput) {
-		observer.blw = new BinLogWriter(observer.fBlocks, isInFlowMode);
+		observer.blw = new BinLogWriter(observer.fBlocks, isBinBuffered);
 	}
 		
 	if (opt.isSet("-m")) {
@@ -435,7 +446,7 @@ int main(int argc, const char *argv[]) {
 		}
 
 	} 
-	else if (isInFlowMode) {
+	else if (opt.isSet("--flow")) {
 		// Input protocol [payload input Size  |  [task_op | payload - if taskOp == E_NEXT_OP_TASK]+ ]
 		// Expecting the size of each task first then the stream of tasks
 		//printf("starging \n");
