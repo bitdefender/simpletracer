@@ -83,4 +83,5 @@ void BinLogWriter::ExecutionEnd()
 void BinLogWriter::ExecutionBegin()
 {
 	bufferHeaderPos = 0;
+	lastModule[0] = '\0';
 }

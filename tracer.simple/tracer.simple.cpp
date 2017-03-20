@@ -13,6 +13,8 @@
 
 ExecutionController *ctrl = NULL;
 bool writeEverythingOnASingleline = false;
+bool writeLogOnFile = false;
+FILE* logFile = stdout; 
 
 static bool gIsLogEnabled = true;
 void Log( const char * format, ... )
@@ -25,11 +27,11 @@ void Log( const char * format, ... )
   va_list args;
   va_start (args, format);
   vsnprintf (buffer,buffSz,format, args);
-  perror (buffer);
+  //perror (buffer);
   va_end (args);
 
-  printf("%s", buffer);
-  fflush(stdout);
+  fprintf(logFile, "%s", buffer);
+  fflush(logFile);
 }
 
 
@@ -217,15 +219,15 @@ void ReadFromFileAndExecute(FILE* inputFile, int sizeToRead = -1)
 		if (readUntilEOF)
 		{
 			fgets(buff, bSize, inputFile);
+		
+			while (*buff) {
+			buff++;
+			bSize--;
+			}
 		}
 		else
 		{
 			fread(buff, sizeof(char), sizeToRead, inputFile);
-		}
-
-		while (*buff) {
-			buff++;
-			bSize--;
 		}
 	} while (!feof(inputFile) && readUntilEOF);
 
@@ -258,6 +260,15 @@ int main(int argc, const char *argv[]) {
 		0,
 		"Disable logs",
 		"--disableLogs"
+	);
+
+		opt.add(
+		"",
+		0,
+		0,
+		0,
+		"write Log On File",
+		"--writeLogOnFile"
 	);
 
 	opt.add(
@@ -353,6 +364,10 @@ int main(int argc, const char *argv[]) {
 		gIsLogEnabled = false;
 	}
 
+	if (opt.isSet("--writeLogOnFile")) {
+		logFile = fopen("log.txt", "w");
+	}
+
 	uint32_t executionType = EXECUTION_INPROCESS;
 
 	if (opt.isSet("--inprocess") && opt.isSet("--extern")) {
@@ -374,7 +389,7 @@ int main(int argc, const char *argv[]) {
 	if (opt.isSet("-h")) {
 		std::string usage;
 		opt.getUsage(usage);
-		printf("%s", usage.c_str());
+		Log("%s", usage.c_str());
 		return 0;
 	}
 
