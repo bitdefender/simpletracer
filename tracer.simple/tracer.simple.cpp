@@ -262,7 +262,7 @@ int main(int argc, const char *argv[]) {
 		"--disableLogs"
 	);
 
-		opt.add(
+	opt.add(
 		"",
 		0,
 		0,
@@ -364,10 +364,12 @@ int main(int argc, const char *argv[]) {
 		gIsLogEnabled = false;
 	}
 
-	if (opt.isSet("--writeLogOnFile")) {
+	const bool writeLogOnFile = opt.isSet("--writeLogOnFile");
+	if (writeLogOnFile) {
 		logFile = fopen("log.txt", "w");
+		fprintf(logFile, "Log:\n");
 	}
-
+	
 	uint32_t executionType = EXECUTION_INPROCESS;
 
 	if (opt.isSet("--inprocess") && opt.isSet("--extern")) {
@@ -503,6 +505,10 @@ int main(int argc, const char *argv[]) {
 	}
 	DeleteExecutionController(ctrl);
 	ctrl = NULL;
+
+	if (writeLogOnFile) {
+		fclose(logFile);
+	}
 
 	fclose(observer.fBlocks);
 	return 0;
