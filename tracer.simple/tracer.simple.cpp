@@ -11,29 +11,12 @@
 #define LIB_EXT ".so"
 #endif
 
+#include "Logger.h"
+
 ExecutionController *ctrl = NULL;
 bool writeEverythingOnASingleline = false;
-bool writeLogOnFile = false;
-FILE* logFile = stdout; 
 
-static bool gIsLogEnabled = true;
-void Log( const char * format, ... )
-{
-  if (!gIsLogEnabled)
-  	return;
-  
-  static const int buffSz = 2048;
-  static char buffer[buffSz];
-  va_list args;
-  va_start (args, format);
-  vsnprintf (buffer,buffSz,format, args);
-  //perror (buffer);
-  va_end (args);
-
-  fprintf(logFile, "%s", buffer);
-  fflush(logFile);
-}
-
+Logger gLog;
 
 class CustomObserver : public ExecutionObserver {
 public :
@@ -49,7 +32,7 @@ public :
 	std::string fileName;
 
 	virtual void TerminationNotification(void *ctx) {
-		Log("Process Terminated\n");
+		gLog.Log("Process Terminated\n");
 	}
 
 	unsigned int GetModuleOffset(const std::string &module) const {
@@ -108,7 +91,7 @@ public :
 	}
 
 	virtual unsigned int ExecutionBegin(void *ctx, void *address) {
-		Log("Process starting\n");
+		gLog.Log("Process starting\n");
 		ctrl->GetModules(mInfo, mCount);
 
 		if (!patchFile.empty()) {
@@ -117,7 +100,7 @@ public :
 			fPatch.open(patchFile);
 			
 			if (!fPatch.good()) {
-				Log("Patch file not found\n");
+				gLog.Log("Patch file not found\n");
 				return EXECUTION_TERMINATE;
 			}
 
@@ -233,7 +216,9 @@ void ReadFromFileAndExecute(FILE* inputFile, int sizeToRead = -1)
 
 	observer.fileName = "stdin";
 
+	gLog.Log("executing..\n");
 	ctrl->Execute();
+	gLog.Log("waiting for termination..\n");
 	ctrl->WaitForTermination();
 }
 
@@ -360,20 +345,19 @@ int main(int argc, const char *argv[]) {
 	opt.parse(argc, argv);
 
 	// Don't write logs before this check
-	if (opt.isSet("--disableLogs")) {
-		gIsLogEnabled = false;
+	if (!opt.isSet("--disableLogs")) {
+		gLog.EnableLog();
 	}
 
 	const bool writeLogOnFile = opt.isSet("--writeLogOnFile");
 	if (writeLogOnFile) {
-		logFile = fopen("log.txt", "w");
-		fprintf(logFile, "Log:\n");
+		gLog.SetLoggingToFile("log.txt");
 	}
 	
 	uint32_t executionType = EXECUTION_INPROCESS;
 
 	if (opt.isSet("--inprocess") && opt.isSet("--extern")) {
-		Log("Conflicting options --inprocess and --extern\n");
+		gLog.Log("Conflicting options --inprocess and --extern\n");
 		return 0;
 	}
 
@@ -382,7 +366,7 @@ int main(int argc, const char *argv[]) {
 	}
 
 	if (executionType != EXECUTION_INPROCESS) {
-		Log("Only inprocess execution supported for now! Sorry!\n");
+		gLog.Log("Only inprocess execution supported for now! Sorry!\n");
 		return 0;
 	}
 
@@ -391,16 +375,16 @@ int main(int argc, const char *argv[]) {
 	if (opt.isSet("-h")) {
 		std::string usage;
 		opt.getUsage(usage);
-		Log("%s", usage.c_str());
+		gLog.Log("%s", usage.c_str());
 		return 0;
 	}
 
 	std::string fModule;
 	opt.get("-p")->getString(fModule);
-	Log("Using payload %s\n", fModule.c_str());
+	gLog.Log("Using payload %s\n", fModule.c_str());
 	lib_t hModule = GET_LIB_HANDLER(fModule.c_str());
 	if (nullptr == hModule) {
-		Log("PayloadHandler not found\n");
+		gLog.Log("PayloadHandler not found\n");
 		return 0;
 	}
 
@@ -408,7 +392,7 @@ int main(int argc, const char *argv[]) {
 	PayloadHandler = (PayloadHandlerFunc)LOAD_PROC(hModule, "Payload");
 
 	if ((nullptr == payloadBuff) || (nullptr == PayloadHandler)) {
-		Log("PayloadHandler imports not found\n");
+		gLog.Log("PayloadHandler imports not found\n");
 		return 0;
 	}		
 
@@ -423,17 +407,17 @@ int main(int argc, const char *argv[]) {
 	opt.get("-o")->getString(fName);
 	if (strcmp(fName.c_str(), "stdout") == 0)
 	{
-		Log("Writing to stdout\n");
+		gLog.Log("Writing to stdout\n");
 		observer.fBlocks = stdout;
 	}
 	else
 	{
-		Log("Writing %s output to %s. Is buffered ? %d\n", observer.binOut ? "binary" : "text", fName.c_str(), (int)isBinBuffered);
+		gLog.Log("Writing %s output to %s. Is buffered ? %d\n", observer.binOut ? "binary" : "text", fName.c_str(), (int)isBinBuffered);
 		FOPEN(observer.fBlocks, fName.c_str(), observer.binOut ? "wb" : "wt");
 	}
 
 	if (isBinaryOutput) {
-		observer.blw = new BinLogWriter(observer.fBlocks, isBinBuffered);
+		observer.blw = new BinLogWriter(observer.fBlocks, isBinBuffered, gLog);
 	}
 		
 	if (opt.isSet("-m")) {
@@ -453,7 +437,7 @@ int main(int argc, const char *argv[]) {
 			CorpusItemHeader header;
 			if ((1 == fread(&header, sizeof(header), 1, stdin)) &&
 					(header.size == fread(payloadBuff, 1, header.size, stdin))) {
-				Log("Using %s as input file\n", header.fName);
+				gLog.Log("Using %s as input file\n", header.fName);
 
 				observer.fileName = header.fName;
 
@@ -471,7 +455,7 @@ int main(int argc, const char *argv[]) {
 
 		unsigned int payloadInputSizePerTask = -1;
 		fread(&payloadInputSizePerTask, sizeof(payloadInputSizePerTask), 1, stdin);				
-		Log ("size of payload %d \n", payloadInputSizePerTask);
+		gLog.Log ("size of payload %d \n", payloadInputSizePerTask);
 
 		enum FlowOpCode
 		{
@@ -483,18 +467,19 @@ int main(int argc, const char *argv[]) {
 		while(true)
 		{
 			fread(&nextOp, sizeof(char), 1, stdin);
-			Log("NNext op code %d\n" , nextOp);
+			gLog.Log("NNext op code %d\n" , nextOp);
 			
 			if (nextOp == 0) {
-				Log("Stopping");
+				gLog.Log("Stopping");
 				break;
 			} 
 			else if (nextOp == 1){
-				Log("executing a new task\n");
+				gLog.Log("### Executing a new task\n");
 				ReadFromFileAndExecute(stdin, payloadInputSizePerTask);
+				gLog.Log("###Finished executing the task\n");
 			}
 			else{
-				Log("invalid next op value !! probably the data stream is corrupted\n");
+				gLog.Log("invalid next op value !! probably the data stream is corrupted\n");
 				break;
 			}			
 		}
@@ -505,10 +490,6 @@ int main(int argc, const char *argv[]) {
 	}
 	DeleteExecutionController(ctrl);
 	ctrl = NULL;
-
-	if (writeLogOnFile) {
-		fclose(logFile);
-	}
 
 	fclose(observer.fBlocks);
 	return 0;

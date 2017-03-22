@@ -3,6 +3,8 @@
 
 #include <stdio.h>
 
+class Logger;
+
 #define ENTRY_TYPE_BASIC_BLOCK 0x000000BB
 
 struct BinLogEntry {
@@ -20,6 +22,7 @@ class BinLogWriter {
 private:
 	FILE *fLog;
 	char lastModule[4096];
+	Logger& logger;
 
 	// Variables below are used for buffering mode. 
 	// The reason i need buffering is that communication to the tracer.simple process are done by pipes and we can't seek in a pipe.
@@ -31,7 +34,7 @@ private:
 
 
 public:
-	BinLogWriter(FILE *log, bool shouldBufferEntries = false);
+	BinLogWriter(FILE *log, bool shouldBufferEntries, Logger& logger);
 	virtual ~BinLogWriter();
 	bool WriteEntry(const char *module, unsigned int offset, unsigned int cost);
 

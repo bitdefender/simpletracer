@@ -2,8 +2,12 @@
 
 #include <string.h>
 #include <cstdlib>
+#include "Logger.h"
 
-BinLogWriter::BinLogWriter(FILE *log, const bool shouldBufferEntries) {
+
+BinLogWriter::BinLogWriter(FILE *log, const bool shouldBufferEntries, Logger& _logger) 
+: logger(_logger)
+{
 	fLog = log;
 	lastModule[0] = '\0';
 
@@ -23,7 +27,7 @@ BinLogWriter::~BinLogWriter()
 
 bool BinLogWriter::WriteEntry(const char *module, unsigned int offset, unsigned int cost) {
 	BinLogEntry ble;
-
+	fprintf(fLog, "\tstart write entry\n");
 	ble.entryType = ENTRY_TYPE_BASIC_BLOCK;
 	ble.modNameLength = 0;
 	if (strcmp(lastModule, module)) {
@@ -44,7 +48,7 @@ bool BinLogWriter::WriteEntry(const char *module, unsigned int offset, unsigned 
 	{
 		if (bufferHeaderPos + sizeof(ble) + ble.modNameLength >= MAX_ENTRIES_BUFFER_SIZE)
 		{
-			fprintf(stderr, "Already reached the end of the buffer :( exiting\n");
+			logger.Log("Already reached the end of the buffer :( exiting\n");
 			exit(1);
 		}
 
@@ -57,6 +61,7 @@ bool BinLogWriter::WriteEntry(const char *module, unsigned int offset, unsigned 
 		}
 	}
 	
+	logger.Log("\tend write entry\n");
 	return true;
 }
 
