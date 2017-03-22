@@ -4,8 +4,8 @@ makefile_dir := $(patsubst %/,%,$(dir $(mkfile_path)))
 simple_tracer := tracer.simple
 CC := gcc
 CXX := g++
-CPP_FILES := BinLog.cpp tracer.simple.cpp
-OBJ_FILES := BinLog.o tracer.simple.o
+CPP_FILES := BinLog.cpp tracer.simple.cpp Logger.cpp
+OBJ_FILES := BinLog.o tracer.simple.o Logger.o
 LD_PATHS := -L$(makefile_dir)/../libs
 
 LD_FLAGS := -lexecution -lpthread -ldl
