@@ -1,4 +1,5 @@
 #include "Logger.h"
+#include <stdarg.h>
 
 Logger::Logger() 
     : isLogEnabled(false) 
@@ -33,7 +34,7 @@ void Logger::EnableLog()
 
 void Logger::SetLoggingToFile(const char* filename)
 {
-	logFile = fopen(filename);
+	logFile = fopen(filename, "w");
 	writeLogOnFile = true;
 }
 

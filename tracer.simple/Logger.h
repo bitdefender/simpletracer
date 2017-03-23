@@ -1,6 +1,8 @@
 #ifndef _LOGGER_H_
 #define _LOGGER_H_
 
+#include <stdio.h>
+
 class Logger
 {
 public:

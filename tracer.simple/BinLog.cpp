@@ -5,10 +5,10 @@
 #include "Logger.h"
 
 
-BinLogWriter::BinLogWriter(FILE *log, const bool shouldBufferEntries, Logger& _logger) 
+BinLogWriter::BinLogWriter(FILE *outFile, const bool shouldBufferEntries, Logger& _logger) 
 : logger(_logger)
 {
-	fLog = log;
+	fOutFile = outFile;
 	lastModule[0] = '\0';
 
 	bufferingEntries 	= shouldBufferEntries;
@@ -27,7 +27,7 @@ BinLogWriter::~BinLogWriter()
 
 bool BinLogWriter::WriteEntry(const char *module, unsigned int offset, unsigned int cost) {
 	BinLogEntry ble;
-	fprintf(fLog, "\tstart write entry\n");
+	logger.Log("\tstart write entry\n");
 	ble.entryType = ENTRY_TYPE_BASIC_BLOCK;
 	ble.modNameLength = 0;
 	if (strcmp(lastModule, module)) {
@@ -39,9 +39,9 @@ bool BinLogWriter::WriteEntry(const char *module, unsigned int offset, unsigned 
 
 	if (!bufferingEntries)
 	{						
-		fwrite(&ble, sizeof(ble), 1, fLog);
+		fwrite(&ble, sizeof(ble), 1, fOutFile);
 		if (ble.modNameLength) {
-			fwrite(module, 1, ble.modNameLength, fLog);
+			fwrite(module, 1, ble.modNameLength, fOutFile);
 		}
 	}
 	else
@@ -69,18 +69,18 @@ void BinLogWriter::ExecutionEnd()
 {
 	// If using buffer mode, write it to stdout
 	if (!bufferEntries) { 
-		if (fLog) {
-			fflush(fLog);
+		if (fOutFile) {
+			fflush(fOutFile);
 		}
 	}
 	else {
-		if (fLog) {	
+		if (fOutFile) {	
 			// Write the total number of bytes of the output buffer, then the buffered data
 			const size_t totalSizeToWrite = sizeof(bufferEntries[0]) * bufferHeaderPos;
-			fwrite(&totalSizeToWrite, sizeof(totalSizeToWrite), 1, fLog);
-			fwrite(bufferEntries, sizeof(bufferEntries[0]), bufferHeaderPos, fLog);
+			fwrite(&totalSizeToWrite, sizeof(totalSizeToWrite), 1, fOutFile);
+			fwrite(bufferEntries, sizeof(bufferEntries[0]), bufferHeaderPos, fOutFile);
 
-			fflush(fLog);
+			fflush(fOutFile);
 		}
 	}
 }

@@ -2,7 +2,6 @@
 #include "BinLog.h"
 #include "Execution/Execution.h"
 #include "CommonCrossPlatform/Common.h"
-#include <stdarg.h>
 
 #ifdef _WIN32
 #include <Windows.h>

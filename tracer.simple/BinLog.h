@@ -20,7 +20,7 @@ struct BinLogEntry {
 
 class BinLogWriter {
 private:
-	FILE *fLog;
+	FILE *fOutFile;
 	char lastModule[4096];
 	Logger& logger;
 
