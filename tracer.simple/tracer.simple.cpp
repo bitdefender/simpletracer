@@ -324,6 +324,8 @@ int main(int argc, const char *argv[]) {
 	ctrl->SetExecutionFeatures(0);
 
 	ctrl->SetExecutionObserver(&observer);
+
+	ctrl->Startup();
 	
 	if (opt.isSet("--batch")) {
 		freopen(NULL, "rb", stdin);

@@ -126,6 +126,7 @@ public:
 	virtual bool SetEntryPoint(void *ep) = 0;
 	virtual bool SetExecutionFeatures(unsigned int feat) = 0;
 
+	virtual bool Startup() = 0;
 	virtual bool Execute() = 0;
 	// wait for the whole thing to terminate
 	virtual bool WaitForTermination() = 0;
