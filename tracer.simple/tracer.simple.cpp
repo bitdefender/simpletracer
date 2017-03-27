@@ -13,11 +13,24 @@
 #ifdef _WIN32
 #include <Windows.h>
 #define LIB_EXT ".dll"
+#define GET_LIB_HANDLER2(libname) LoadLibraryA((libname))
 #else
 #define LIB_EXT ".so"
+#define GET_LIB_HANDLER2(libname) dlopen((libname), RTLD_LAZY)
 #endif
 
 ExecutionController *ctrl = NULL;
+bool batched = false;
+
+struct CorpusItemHeader {
+	char fName[60];
+	unsigned int size;
+};
+
+#define MAX_BUFF 4096
+typedef int(*PayloadHandlerFunc)();
+char *payloadBuff = nullptr;
+PayloadHandlerFunc PayloadHandler = nullptr;
 
 class CustomObserver : public ExecutionObserver {
 public :
@@ -148,8 +161,21 @@ public :
 	}
 
 	virtual unsigned int ExecutionEnd(void *ctx) {
-		//fflush(fBlocks);
-		return EXECUTION_TERMINATE;
+		if (batched) {
+			CorpusItemHeader header;
+			if ((1 == fread(&header, sizeof(header), 1, stdin)) &&
+				(header.size == fread(payloadBuff, 1, header.size, stdin))) {
+				std::cout << "Using " << header.fName << " as input file." << std::endl;
+
+				aFormat->WriteTestName(header.fName);
+				return EXECUTION_RESTART;
+			}
+
+			return EXECUTION_TERMINATE;
+		} else {
+			//fflush(fBlocks);
+			return EXECUTION_TERMINATE;
+		}
 	}
 
 	CustomObserver() {
@@ -161,16 +187,6 @@ public :
 		delete aFormat;
 	}
 } observer;
-
-#define MAX_BUFF 4096
-typedef int(*PayloadHandlerFunc)();
-char *payloadBuff = nullptr;
-PayloadHandlerFunc PayloadHandler = nullptr;
-
-struct CorpusItemHeader {
-	char fName[60];
-	unsigned int size;
-};
 
 int main(int argc, const char *argv[]) {
 	ez::ezOptionParser opt;
@@ -285,29 +301,19 @@ int main(int argc, const char *argv[]) {
 	std::cout << "Starting " << ((executionType == EXECUTION_EXTERNAL) ? "extern" : "internal") << " tracing on module " << fModule << "\n";
 
 	if (executionType == EXECUTION_INPROCESS) {
-		lib_t hModule = GET_LIB_HANDLER(fModule.c_str());
+		lib_t hModule = GET_LIB_HANDLER2(fModule.c_str());
 		if (nullptr == hModule) {
 			std::cout << "Payload not found" << std::endl;
 			return 0;
 		}
 
-		payloadBuffer = (char *)LOAD_PROC(hModule, "payloadBuffer");
-		Payload = (PayloadFunc)LOAD_PROC(hModule, "Payload");
+		payloadBuff = (char *)LOAD_PROC(hModule, "payloadBuffer");
+		PayloadHandler = (PayloadHandlerFunc)LOAD_PROC(hModule, "Payload");
 
-		if ((nullptr == payloadBuffer) || (nullptr == Payload)) {
+		if ((nullptr == payloadBuff) || (nullptr == PayloadHandler)) {
 			std::cout << "Payload imports not found" << std::endl;
 			return 0;
 		}
-
-		char *buff = payloadBuffer;
-		unsigned int bSize = MAX_BUFF;
-		do {
-			fgets(buff, bSize, stdin);
-			while (*buff) {
-				buff++;
-				bSize--;
-			}
-		} while (!feof(stdin));
 	}
 
 	if (opt.isSet("--binlog")) {
@@ -335,7 +341,7 @@ int main(int argc, const char *argv[]) {
 	}
 
 	if (executionType == EXECUTION_INPROCESS) {
-		ctrl->SetEntryPoint((void*)Payload);
+		ctrl->SetEntryPoint((void*)PayloadHandler);
 	} else if (executionType == EXECUTION_EXTERNAL) {
 		wchar_t ws[4096];
 		std::mbstowcs(ws, fModule.c_str(), fModule.size() + 1);
@@ -349,6 +355,7 @@ int main(int argc, const char *argv[]) {
 	ctrl->SetExecutionObserver(&observer);
 
 	if (opt.isSet("--batch")) {
+		batched = true;
 		freopen(NULL, "rb", stdin);
 		
 		while (!feof(stdin)) {
