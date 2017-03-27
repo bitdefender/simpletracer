@@ -29,7 +29,7 @@ $ ln -s  `readlink -f ./simpletracer/scripts/clean_build.sh` clean_build.sh
 ## 3. build
 
 ```
-$ ./clean_build.sh master 0.0.2
+$ ./clean_build.sh master 0.0.3
 $ cd build
 $ cmake --build .
 $ cd -
