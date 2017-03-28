@@ -22,15 +22,15 @@ $ git clone https://github.com/teodor-stoenescu/simpletracer.git
 ```
 ## 2. environment setup
 
+You need to set up the environment every time there's a new river release. This also builds the river tools.
 ```
-$ ln -s  `readlink -f ./simpletracer/scripts/clean_build.sh` clean_build.sh
+$ ./scripts/clean_build.sh master <latest_release (currently 0.1.0)>
 ```
 
 ## 3. build
 
 ```
-$ ./clean_build.sh master 0.0.3
-$ cd build
+$ cd build-river-tools
 $ cmake --build .
 $ cd -
 ```
@@ -38,7 +38,7 @@ $ cd -
 ## 4. run
 ```
 $ cd ./build/bin
-$ export LD_LIBRARY_PATH=`pwd`/../lib
+$ export LD_LIBRARY_PATH=`pwd`/../../river.sdk/lin/lib
 $ ./simple_tracer --payload libhttp-parser.so < <input_test_case>
 ```
 
