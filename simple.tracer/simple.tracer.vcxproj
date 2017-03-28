@@ -127,8 +127,8 @@
     <ClCompile Include="AbstractLog.cpp" />
     <ClCompile Include="BinFormat.cpp" />
     <ClCompile Include="FileLog.cpp" />
+    <ClCompile Include="simple.tracer.cpp" />
     <ClCompile Include="TextFormat.cpp" />
-    <ClCompile Include="tracer.simple.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="AbstractLog.h" />
