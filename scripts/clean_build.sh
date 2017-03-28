@@ -1,13 +1,14 @@
 #!/usr/bin/env bash
 
 [ "$1" != "" ] || [ "$2" != "" ] || { echo "Usage: $0 <branch-name>" >&2; exit 1; }
-CWD="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
-SRC_DIR="$CWD/simpletracer"
-echo "Updating the repository ..."
-(cd $SRC_DIR && git pull origin $1)
-
+CWD=`pwd`
+SWD="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
+SRC_DIR=$CWD
 echo "Checking requirements ..."
 [ "$GITHUB_API_TOKEN" = "" ] && { echo "Error: Set GITHUB_API_TOKEN accordingly"; exit 1; }
+
+echo "Updating the repository ..."
+(cd $SRC_DIR && git pull https://$GITHUB_API_TOKEN@github.com/teodor-stoenescu/simpletracer.git $1)
 
 echo "Cleaning the build environment ..."
 BUILD_DIR="$CWD/build"
@@ -27,7 +28,7 @@ for corpus in "libxml2" "http-parser"; do
 	[ "$CORPUS_DIR" = "/" ] && { echo "Error: Interesting attempt to wipe the disk"; exit 1; }
 	rm -rf $CORPUS_DIR
 	mkdir $CORPUS_DIR
-	$CWD/simpletracer/libs.sh teodor-stoenescu simpletracer "$2" "corpus-$corpus.zip" "$CORPUS_DIR/corpus-$corpus.zip"
+	$SWD/libs.sh teodor-stoenescu simpletracer "$2" "corpus-$corpus.zip" "$CORPUS_DIR/corpus-$corpus.zip"
 	unzip "$CORPUS_DIR/corpus-$corpus.zip" -d $CORPUS_DIR
 	rm "$CORPUS_DIR/corpus-$corpus.zip"
 done

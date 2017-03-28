@@ -18,7 +18,7 @@ cleanlibs:
 
 libs:
 	mkdir libs
-	./libs.sh teodor-stoenescu simpletracer 0.0.1 libs.zip ./libs/libs.zip
+	./libs.sh teodor-stoenescu simpletracer 0.0.3 libs.zip ./libs/libs.zip
 	yes | unzip ./libs/libs.zip -d ./libs
 
 deps:
