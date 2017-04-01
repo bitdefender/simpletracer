@@ -4,13 +4,13 @@
 #include <cstdlib>
 #include "Logger.h"
 
-BinFormat::BinFormat(AbstractLog *l, bool shouldBufferEntries, Logger& logger) 
+BinFormat::BinFormat(AbstractLog *l, bool shouldBufferEntries, Logger& _logger) 
 : AbstractFormat(l) 
 , logger(_logger)
 {
 	lastModule[0] 		= '\0';
 	bufferingEntries 	= shouldBufferEntries;
-	bufferEntries 		= shouldBufferEntries ? new char[MAX_ENTRIES_BUFFER_SIZE] : nullptr;
+	bufferEntries 		= shouldBufferEntries ? new unsigned char[MAX_ENTRIES_BUFFER_SIZE] : nullptr;
 	bufferHeaderPos 	= 0;
 }
 
@@ -39,7 +39,7 @@ void BinFormat::OnExecutionEnd()
 	else {
 		// Write the total number of bytes of the output buffer, then the buffered data
 		const size_t totalSizeToWrite = sizeof(bufferEntries[0]) * bufferHeaderPos;
-		log->WriteBytes(&totalSizeToWrite, sizeof(totalSizeToWrite));
+		log->WriteBytes((unsigned char*)&totalSizeToWrite, sizeof(totalSizeToWrite));
 		log->WriteBytes(bufferEntries, sizeof(bufferEntries[0]) * bufferHeaderPos);
 		log->Flush();
 	}

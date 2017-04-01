@@ -25,6 +25,7 @@ ExecutionController *ctrl = NULL;
 Logger gLog;
 
 bool batched = false;
+bool flowMode = false;
 
 struct CorpusItemHeader {
 	char fName[60];
@@ -167,15 +168,19 @@ public :
 			CorpusItemHeader header;
 			if ((1 == fread(&header, sizeof(header), 1, stdin)) &&
 				(header.size == fread(payloadBuff, 1, header.size, stdin))) {
-				std::cout << "Using " << header.fName << " as input file." << std::endl;
+				gLog.Log("Using %s as input file\n", header.fName);
 
 				aFormat->OnExecutionBegin(header.fName);
 				return EXECUTION_RESTART;
 			}
 
 			return EXECUTION_TERMINATE;
-		} else {
-			//fflush(fBlocks);
+		} 
+		else if (flowMode) {
+				aFormat->OnExecutionBegin(nullptr);
+				return EXECUTION_RESTART;
+		}
+		else {
 			return EXECUTION_TERMINATE;
 		}
 	}
@@ -422,7 +427,7 @@ int main(int argc, const char *argv[]) {
 	observer.aLog = flog;
 
 	if (observer.binOut) {
-		observer.aFormat = new BinFormat(observer.aLog);
+		observer.aFormat = new BinFormat(observer.aLog, isBinBuffered, gLog);
 	} else {
 		observer.aFormat = new TextFormat(observer.aLog);
 	}
@@ -464,10 +469,10 @@ int main(int argc, const char *argv[]) {
 
 	} 
 	else if (opt.isSet("--flow")) {
+		flowMode = true;
 		// Input protocol [payload input Size  |  [task_op | payload - if taskOp == E_NEXT_OP_TASK]+ ]
 		// Expecting the size of each task first then the stream of tasks
 		//printf("starging \n");
-		writeEverythingOnASingleline = true;
 
 		unsigned int payloadInputSizePerTask = -1;
 		fread(&payloadInputSizePerTask, sizeof(payloadInputSizePerTask), 1, stdin);				
