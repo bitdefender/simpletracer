@@ -1,7 +1,7 @@
 #ifndef _ABSTRACT_LOG_H_
 #define _ABSTRACT_LOG_H_
 
-#define PATH_LEN 256
+#define PATH_LEN 4096
 
 class AbstractLog {
 private :
@@ -28,6 +28,8 @@ public :
 	AbstractFormat(AbstractLog *l) {
 		log = l;
 	}
+	
+	virtual ~AbstractFormat(){}
 
 	virtual bool WriteTestName(
 		const char *testName
@@ -39,6 +41,10 @@ public :
 		unsigned int cost,
 		unsigned int jumpType
 	) = 0;
+	
+	// Maybe these need a better name ?
+	void OnExecutionEnd() {} 
+	void OnExecutionBegin(const char* testName) { WriteTestName(testName); }
 
 	/*virtual bool WriteInputUsage(
 	unsigned int offset

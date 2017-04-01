@@ -2,12 +2,17 @@
 #include <string.h>
 
 bool FileLog::_OpenLog() {
+	if (isLogToStdout) {
+		fLog = stdout;
+		return true;
+	}
+	
 	fLog = fopen(logName, "wb");
 
 	return fLog != nullptr;
 }
 
-bool FileLog::_CloseLog() {
+bool FileLog::_CloseLog() {	
 	if (nullptr == fLog) {
 		return false;
 	}
@@ -24,6 +29,11 @@ bool FileLog::SetLogFileName(const char *name) {
 
 	strcpy(logName, (char *)name);
 	return true;
+}
+
+bool FileLog::SetAsStdout()
+{
+	isLogToStdout = true;	
 }
 
 bool FileLog::WriteBytes(unsigned char *buffer, unsigned int size) {

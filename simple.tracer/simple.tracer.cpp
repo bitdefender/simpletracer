@@ -19,7 +19,11 @@
 #define GET_LIB_HANDLER2(libname) dlopen((libname), RTLD_LAZY)
 #endif
 
+#include "Logger.h"
+
 ExecutionController *ctrl = NULL;
+Logger gLog;
+
 bool batched = false;
 
 struct CorpusItemHeader {
@@ -36,8 +40,6 @@ class CustomObserver : public ExecutionObserver {
 public :
 	bool binOut;
 
-	//BinLogWriter *blw;
-
 	AbstractLog *aLog;
 	AbstractFormat *aFormat;
 
@@ -48,7 +50,7 @@ public :
 	std::string fileName;
 
 	virtual void TerminationNotification(void *ctx) {
-		printf("Process Terminated\n");
+		gLog.Log("Process Terminated\n");
 	}
 
 	unsigned int GetModuleOffset(const std::string &module) const {
@@ -107,7 +109,7 @@ public :
 	}
 
 	virtual unsigned int ExecutionBegin(void *ctx, void *address) {
-		printf("Process starting\n");
+		gLog.Log("Process starting\n");
 		ctrl->GetModules(mInfo, mCount);
 
 		if (!patchFile.empty()) {
@@ -116,7 +118,7 @@ public :
 			fPatch.open(patchFile);
 			
 			if (!fPatch.good()) {
-				std::cout << "Patch file not found" << std::endl;
+				gLog.Log("Patch file not found\n");
 				return EXECUTION_TERMINATE;
 			}
 
@@ -128,7 +130,7 @@ public :
 		rev::BasicBlockInfo bbInfo;
 		ctrl->GetLastBasicBlockInfo(ctx, &bbInfo);
 
-		aFormat->WriteTestName(fileName.c_str());
+		aFormat->OnExecutionBegin(fileName.c_str());
 
 		return EXECUTION_ADVANCE;
 	}
@@ -167,7 +169,7 @@ public :
 				(header.size == fread(payloadBuff, 1, header.size, stdin))) {
 				std::cout << "Using " << header.fName << " as input file." << std::endl;
 
-				aFormat->WriteTestName(header.fName);
+				aFormat->OnExecutionBegin(header.fName);
 				return EXECUTION_RESTART;
 			}
 
@@ -188,6 +190,37 @@ public :
 	}
 } observer;
 
+
+// Read a payload buffer from a file and execute
+void ReadFromFileAndExecute(FILE* inputFile, int sizeToRead = -1)
+{
+	const bool readUntilEOF = sizeToRead == -1;
+	char *buff = payloadBuff;
+	unsigned int bSize = MAX_BUFF;
+	do {
+		if (readUntilEOF)
+		{
+			fgets(buff, bSize, inputFile);
+		
+			while (*buff) {
+			buff++;
+			bSize--;
+			}
+		}
+		else
+		{
+			fread(buff, sizeof(char), sizeToRead, inputFile);
+		}
+	} while (!feof(inputFile) && readUntilEOF);
+
+	observer.fileName = "stdin";
+
+	gLog.Log("executing..\n");
+	ctrl->Execute();
+	gLog.Log("waiting for termination..\n");
+	ctrl->WaitForTermination();
+}
+
 int main(int argc, const char *argv[]) {
 	ez::ezOptionParser opt;
 
@@ -202,6 +235,24 @@ int main(int argc, const char *argv[]) {
 		0,
 		"Use inprocess execution.",
 		"--inprocess"
+	);
+
+	opt.add(
+		"",
+		0,
+		0,
+		0,
+		"Disable logs",
+		"--disableLogs"
+	);
+
+	opt.add(
+		"",
+		0,
+		0,
+		0,
+		"write Log On File",
+		"--writeLogOnFile"
 	);
 
 	opt.add(
@@ -248,8 +299,26 @@ int main(int argc, const char *argv[]) {
 		false,
 		0,
 		0,
+		"When using binlog, buffer everything before writing the result",
+		"--binbuffered"
+	);
+
+	opt.add(
+		"",
+		false,
+		0,
+		0,
 		"Use a corpus file instead of individual inputs.",
 		"--batch"
+	);
+
+	opt.add(
+		"",
+		false,
+		0,
+		0,
+		"Use this to create a flow of input payload- trace output. Input is fed from a different process",
+		"--flow"
 	);
 
 	opt.add(
@@ -274,10 +343,20 @@ int main(int argc, const char *argv[]) {
 
 	opt.parse(argc, argv);
 
+	// Don't write logs before this check
+	if (!opt.isSet("--disableLogs")) {
+		gLog.EnableLog();
+	}
+
+	const bool writeLogOnFile = opt.isSet("--writeLogOnFile");
+	if (writeLogOnFile) {
+		gLog.SetLoggingToFile("log.txt");
+	}
+	
 	uint32_t executionType = EXECUTION_INPROCESS;
 
 	if (opt.isSet("--inprocess") && opt.isSet("--extern")) {
-		std::cout << "Conflicting options --inprocess and --extern" << std::endl;
+		gLog.Log("Conflicting options --inprocess and --extern\n");
 		return 0;
 	}
 
@@ -290,20 +369,21 @@ int main(int argc, const char *argv[]) {
 	if (opt.isSet("-h")) {
 		std::string usage;
 		opt.getUsage(usage);
-		std::cout << usage;
+		gLog.Log("%s", usage.c_str());
 		return 0;
 	}
 
 	std::string fModule;
 	opt.get("-p")->getString(fModule);
-	std::cout << "Using payload " << fModule << std::endl;
-	if (executionType == EXECUTION_EXTERNAL)
-	std::cout << "Starting " << ((executionType == EXECUTION_EXTERNAL) ? "extern" : "internal") << " tracing on module " << fModule << "\n";
+	gLog.Log("Using payload %s\n", fModule.c_str());
+	if (executionType == EXECUTION_EXTERNAL) {
+		gLog.Log("Starting %s tracing on module %s\n", ((executionType == EXECUTION_EXTERNAL) ? "extern" : "internal"), fModule);
+	}
 
 	if (executionType == EXECUTION_INPROCESS) {
 		lib_t hModule = GET_LIB_HANDLER2(fModule.c_str());
 		if (nullptr == hModule) {
-			std::cout << "Payload not found" << std::endl;
+			gLog.Log("Payload not found\n");
 			return 0;
 		}
 
@@ -311,26 +391,37 @@ int main(int argc, const char *argv[]) {
 		PayloadHandler = (PayloadHandlerFunc)LOAD_PROC(hModule, "Payload");
 
 		if ((nullptr == payloadBuff) || (nullptr == PayloadHandler)) {
-			std::cout << "Payload imports not found" << std::endl;
+			gLog.Log("PayloadHandler imports not found\n");
 			return 0;
 		}
 	}
 
-	if (opt.isSet("--binlog")) {
+	const bool isBinaryOutput = opt.isSet("--binlog");
+	const bool isBinBuffered  = opt.isSet("--binbuffered");
+
+	if (isBinaryOutput) {
 		observer.binOut = true;
 	}
 
 	std::string fName;
 	opt.get("-o")->getString(fName);
-	std::cout << "Writing " << (observer.binOut ? "binary" : "text") << " output to " << fName << std::endl;
-	//FOPEN(observer.fBlocks, fName.c_str(), observer.binOut ? "wb" : "wt");
-
+	
+	// Set the file log type and format
 	FileLog *flog = new FileLog();
-	flog->SetLogFileName(fName.c_str());
+	if (strcmp(fName.c_str(), "stdout") == 0)
+	{
+		gLog.Log("Writing to stdout\n");
+		flog->SetAsStdout();
+	}
+	else
+	{
+		gLog.Log("Writing %s output to %s. Is buffered ? %d\n", observer.binOut ? "binary" : "text", fName.c_str(), (int)isBinBuffered);
+		flog->SetLogFileName(fName.c_str());
+	}
+	
 	observer.aLog = flog;
 
 	if (observer.binOut) {
-		//observer.blw = new BinLogWriter(observer.fBlocks);
 		observer.aFormat = new BinFormat(observer.aLog);
 	} else {
 		observer.aFormat = new TextFormat(observer.aLog);
@@ -345,8 +436,8 @@ int main(int argc, const char *argv[]) {
 	} else if (executionType == EXECUTION_EXTERNAL) {
 		wchar_t ws[4096];
 		std::mbstowcs(ws, fModule.c_str(), fModule.size() + 1);
-		std::cout << "Converted module name [" << fModule << "] to wstring [";
-		std::wcout << std::wstring(ws) << "]\n";
+		gLog.Log("Converted module name [%s] to wstring [", fModule);
+		//std::wcout << std::wstring(ws) << "]\n";
 		ctrl->SetPath(std::wstring(ws));
 	}
 
@@ -362,7 +453,7 @@ int main(int argc, const char *argv[]) {
 			CorpusItemHeader header;
 			if ((1 == fread(&header, sizeof(header), 1, stdin)) &&
 					(header.size == fread(payloadBuff, 1, header.size, stdin))) {
-				std::cout << "Using " << header.fName << " as input file." << std::endl;
+				gLog.Log("Using %s as input file\n", header.fName);
 
 				observer.fileName = header.fName;
 
@@ -371,20 +462,46 @@ int main(int argc, const char *argv[]) {
 			}
 		}
 
-	} else {
-		char *buff = payloadBuff;
-		unsigned int bSize = MAX_BUFF;
-		do {
-			fgets(buff, bSize, stdin);
-			while (*buff) {
-				buff++;
-				bSize--;
+	} 
+	else if (opt.isSet("--flow")) {
+		// Input protocol [payload input Size  |  [task_op | payload - if taskOp == E_NEXT_OP_TASK]+ ]
+		// Expecting the size of each task first then the stream of tasks
+		//printf("starging \n");
+		writeEverythingOnASingleline = true;
+
+		unsigned int payloadInputSizePerTask = -1;
+		fread(&payloadInputSizePerTask, sizeof(payloadInputSizePerTask), 1, stdin);				
+		gLog.Log ("size of payload %d \n", payloadInputSizePerTask);
+
+		enum FlowOpCode
+		{
+			E_NEXTOP_CLOSE,
+			E_NEXTOP_TASK
+		};
+
+		FlowOpCode nextOp = E_NEXTOP_TASK;
+		while(true)
+		{
+			fread(&nextOp, sizeof(char), 1, stdin);
+			gLog.Log("NNext op code %d\n" , nextOp);
+			
+			if (nextOp == 0) {
+				gLog.Log("Stopping");
+				break;
+			} 
+			else if (nextOp == 1){
+				gLog.Log("### Executing a new task\n");
+				ReadFromFileAndExecute(stdin, payloadInputSizePerTask);
+				gLog.Log("###Finished executing the task\n");
 			}
-		} while (!feof(stdin));
-
-		observer.fileName = "stdin";
-
-		ctrl->Execute();
+			else{
+				gLog.Log("invalid next op value !! probably the data stream is corrupted\n");
+				break;
+			}			
+		}
+	}
+	else {
+		ReadFromFileAndExecute(stdin);
 		ctrl->WaitForTermination();
 	}
 
