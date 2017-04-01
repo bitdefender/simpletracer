@@ -39,7 +39,7 @@ struct BinLogEntry {
 /*class BinFormat : public AbstractFormat {
 private:
 	FILE *fLog;
-	char lastModule[4096];
+	char lastModule[PATH_LEN];
 protected :
 	bool _OpenLog();
 	bool _CloseLog();
@@ -51,13 +51,26 @@ public :
 
 class BinFormat : public AbstractFormat {
 private :
-	char lastModule[4096];
-public :
-	BinFormat(AbstractLog *l) : AbstractFormat(l) {}
-
+	char lastModule[PATH_LEN];
+	
+	// Variables below are used for buffering mode. 
+	// The reason i need buffering is that communication to the tracer.simple process are done by pipes and we can't seek in a pipe.
+	// What I do is to write all entries in the buffer at runtime, then when executon ends write data to pipe(stdout) [number of bytes used + buffer]
+	bool bufferingEntries;										// True if buffering entries
+	char* bufferEntries;										// If this is created with shouldBufferEntries = true => we'll buffer all entries and send them at once
+	static const int MAX_ENTRIES_BUFFER_SIZE = 1024*1024*2;   	// Preallocated buffer used when buffering entries. If exceeded an exception occurs. TODO: recreate buffer when exceeded max size ?
+	int bufferHeaderPos;
+	
+	// Writes data either to the internal buffer or to the log file depending on the type
+	void WriteData(const unsigned char* data, const unsigned int size, const bool ignoreInBufferedMode = false);
+	
 	virtual bool WriteTestName(
 		const char *testName
 	);
+	
+public :
+	BinFormat(AbstractLog *l, bool shouldBufferEntries, Logger& logger);
+	virtual ~BinFormat();
 
 	virtual bool WriteBasicBlock(
 		const char *module,
@@ -65,6 +78,10 @@ public :
 		unsigned int cost,
 		unsigned int jumpType
 	);
+	
+	// Callbacks to know about execution status and update internal data structures	
+	void OnExecutionEnd();
+	void OnExecutionBegin(const char* testName); // testName optional when running in buffered / flow mode (you can set it as nullptr)
 };
 
 #endif
