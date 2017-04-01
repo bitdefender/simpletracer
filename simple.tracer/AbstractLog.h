@@ -16,7 +16,7 @@ protected :
 	bool IsLogOpen();
 	
 public :
-	virtual bool WriteBytes(unsigned char *buffer, unsigned int size) = 0;
+	virtual bool WriteBytes(const unsigned char *buffer, const unsigned int size) = 0;
 	virtual bool Flush() = 0;
 };
 

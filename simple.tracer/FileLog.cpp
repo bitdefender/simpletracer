@@ -36,7 +36,7 @@ bool FileLog::SetAsStdout()
 	isLogToStdout = true;	
 }
 
-bool FileLog::WriteBytes(unsigned char *buffer, unsigned int size) {
+bool FileLog::WriteBytes(const unsigned char *buffer, const unsigned int size) {
 	if (!IsLogOpen()) {
 		if (!OpenLog()) {
 			return false;
