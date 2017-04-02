@@ -11,6 +11,7 @@ protected :
 	virtual bool _OpenLog() = 0;
 	virtual bool _CloseLog() = 0;
 
+
 	bool OpenLog();
 	bool CloseLog();
 	bool IsLogOpen();
@@ -43,8 +44,8 @@ public :
 	) = 0;
 	
 	// Maybe these need a better name ?
-	void OnExecutionEnd() {} 
-	void OnExecutionBegin(const char* testName) { WriteTestName(testName); }
+	virtual void OnExecutionEnd() {} 
+	virtual void OnExecutionBegin(const char* testName) { WriteTestName(testName); }
 
 	/*virtual bool WriteInputUsage(
 	unsigned int offset

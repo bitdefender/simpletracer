@@ -164,6 +164,8 @@ public :
 	}
 
 	virtual unsigned int ExecutionEnd(void *ctx) {
+		aFormat->OnExecutionEnd();
+
 		if (batched) {
 			CorpusItemHeader header;
 			if ((1 == fread(&header, sizeof(header), 1, stdin)) &&
@@ -416,7 +418,7 @@ int main(int argc, const char *argv[]) {
 	if (strcmp(fName.c_str(), "stdout") == 0)
 	{
 		gLog.Log("Writing to stdout\n");
-		flog->SetAsStdout();
+		flog->SetExternalFile(stdout);
 	}
 	else
 	{
@@ -472,7 +474,6 @@ int main(int argc, const char *argv[]) {
 		flowMode = true;
 		// Input protocol [payload input Size  |  [task_op | payload - if taskOp == E_NEXT_OP_TASK]+ ]
 		// Expecting the size of each task first then the stream of tasks
-		//printf("starging \n");
 
 		unsigned int payloadInputSizePerTask = -1;
 		fread(&payloadInputSizePerTask, sizeof(payloadInputSizePerTask), 1, stdin);				

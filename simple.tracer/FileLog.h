@@ -8,15 +8,15 @@ class FileLog : public AbstractLog {
 private :
 	FILE *fLog;
 	char logName[PATH_LEN];
-	bool	isLogToStdout;		// True if logging to stdout. Maybe we need a better abstraction here...
+	bool isExternalFileSet;		// True if an external file was set directly instead of giving a filename to open
 protected :
 	virtual bool _OpenLog();
 	virtual bool _CloseLog();
 
 public:
-	FileLog() : fLog(nullptr), isLogToStdout(false) { logName[0] = 0;}
+	FileLog() : fLog(nullptr), isExternalFileSet(false) { logName[0] = 0;}
 	virtual bool SetLogFileName(const char *name);
-	virtual bool SetAsStdout();
+	virtual bool SetExternalFile(FILE* externalFile);
 	virtual bool WriteBytes(const unsigned char *buffer, const unsigned int size);
 	virtual bool Flush();
 };

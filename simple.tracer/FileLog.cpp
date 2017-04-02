@@ -2,8 +2,7 @@
 #include <string.h>
 
 bool FileLog::_OpenLog() {
-	if (isLogToStdout) {
-		fLog = stdout;
+	if (isExternalFileSet) {
 		return true;
 	}
 	
@@ -31,9 +30,12 @@ bool FileLog::SetLogFileName(const char *name) {
 	return true;
 }
 
-bool FileLog::SetAsStdout()
+bool FileLog::SetExternalFile(FILE* externalFile)
 {
-	isLogToStdout = true;	
+	fLog = externalFile;
+	isExternalFileSet = true;	
+
+	return true;
 }
 
 bool FileLog::WriteBytes(const unsigned char *buffer, const unsigned int size) {

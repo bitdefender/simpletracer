@@ -83,8 +83,8 @@ public :
 	);
 	
 	// Callbacks to know about execution status and update internal data structures	
-	void OnExecutionEnd();
-	void OnExecutionBegin(const char* testName); // testName optional when running in buffered / flow mode (you can set it as nullptr)
+	void OnExecutionEnd() override;
+	void OnExecutionBegin(const char* testName) override; // testName optional when running in buffered / flow mode (you can set it as nullptr)
 };
 
 #endif
