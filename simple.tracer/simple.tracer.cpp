@@ -110,7 +110,6 @@ public :
 	}
 
 	virtual unsigned int ExecutionBegin(void *ctx, void *address) {
-		gLog.Log("Process starting\n");
 		ctrl->GetModules(mInfo, mCount);
 
 		if (!patchFile.empty()) {
@@ -179,6 +178,7 @@ public :
 			return EXECUTION_TERMINATE;
 		} 
 		else if (flowMode) {
+				//gLog.Log("On flow mode restart\n");
 				aFormat->OnExecutionBegin(nullptr);
 				return EXECUTION_RESTART;
 		}
@@ -222,9 +222,9 @@ void ReadFromFileAndExecute(FILE* inputFile, int sizeToRead = -1)
 
 	observer.fileName = "stdin";
 
-	gLog.Log("executing..\n");
+	//gLog.Log("executing..\n");
 	ctrl->Execute();
-	gLog.Log("waiting for termination..\n");
+	//gLog.Log("waiting for termination..\n");
 	ctrl->WaitForTermination();
 }
 

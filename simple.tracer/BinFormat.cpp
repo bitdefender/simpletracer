@@ -27,7 +27,6 @@ void BinFormat::OnExecutionBegin(const char* testName)
 {
 	bufferHeaderPos = 0;
 	lastModule[0] = '\0';
-	
 	WriteTestName(testName);
 }
 
@@ -101,6 +100,9 @@ void BinFormat::WriteData(const unsigned char* data, const unsigned int size, co
 bool BinFormat::WriteTestName(
 	const char *testName
 ) {
+	if (testName == nullptr)
+		return false;
+
 	unsigned char buff[PATH_LEN + sizeof(BinLogEntryHeader)];
 	BinLogEntryHeader *bleh = (BinLogEntryHeader *)buff;
 	char *name = (char *)&bleh[1];
