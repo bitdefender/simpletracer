@@ -42,6 +42,9 @@ void BinFormat::OnExecutionEnd()
 		log->WriteBytes((unsigned char*)&totalSizeToWrite, sizeof(totalSizeToWrite));
 		log->WriteBytes(bufferEntries, sizeof(bufferEntries[0]) * bufferHeaderPos);
 		log->Flush();
+
+		//logger.Log("Wrote %d bytes and flushed\n", (int)totalSizeToWrite);
+
 	}
 }
 
