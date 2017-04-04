@@ -33,3 +33,13 @@
 *.exe
 *.out
 *.app
+
+# Gdb peda
+.gdb_history
+peda-session-*.txt
+
+# Sdk and build
+build-river-tools
+corpus-*
+river.sdk
+
