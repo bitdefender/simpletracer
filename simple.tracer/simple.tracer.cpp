@@ -178,6 +178,16 @@ public :
 		}
 	}
 
+	virtual unsigned int TranslationError(void *ctx, void *address) {
+		printf("Error issued at address %p\n", address);
+		auto direction = ExecutionEnd(ctx);
+		if (direction == EXECUTION_RESTART) {
+			printf("Restarting after issue\n");
+		}
+		printf("Translation error. Exiting ...\n");
+		pthread_exit(NULL);
+	}
+
 	CustomObserver() {
 		binOut = false;
 	}
