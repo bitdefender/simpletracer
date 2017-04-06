@@ -33,3 +33,12 @@
 *.exe
 *.out
 *.app
+
+# SDK
+river.sdk
+
+# Build directory
+build-river-tools
+
+# Corpus directory
+corpus-*
