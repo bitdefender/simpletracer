@@ -26,6 +26,12 @@ Logger gLog;
 
 bool batched = false;
 bool flowMode = false;
+unsigned int payloadInputSizePerTask = 0;
+enum FlowOpCode
+{
+	E_NEXTOP_CLOSE,
+	E_NEXTOP_TASK
+};
 
 struct CorpusItemHeader {
 	char fName[60];
@@ -36,6 +42,8 @@ struct CorpusItemHeader {
 typedef int(*PayloadHandlerFunc)();
 char *payloadBuff = nullptr;
 PayloadHandlerFunc PayloadHandler = nullptr;
+
+void ReadFromFileAndExecute(FILE* inputFile, int sizeToRead);
 
 class CustomObserver : public ExecutionObserver {
 public :
@@ -176,26 +184,36 @@ public :
 			}
 
 			return EXECUTION_TERMINATE;
-		} 
-		else if (flowMode) {
-				//gLog.Log("On flow mode restart\n");
+		} else if (flowMode) {
+			gLog.Log("On flow mode restart\n");
+
+			FlowOpCode nextOp = E_NEXTOP_TASK;
+			fread(&nextOp, sizeof(char), 1, stdin);
+			gLog.Log("NNext op code %d\n" , nextOp);
+
+			if (nextOp == 0) {
+				gLog.Log("Stopping\n");
+				flowMode = false;
+				return EXECUTION_TERMINATE;
+			} else if (nextOp == 1){
+				gLog.Log("### Executing a new task\n");
+				ReadFromFileAndExecute(stdin, payloadInputSizePerTask);
+				gLog.Log("###Finished executing the task\n");
 				aFormat->OnExecutionBegin(nullptr);
 				return EXECUTION_RESTART;
-		}
-		else {
+			}
+
+			gLog.Log("invalid next op value !! probably the data stream is corrupted\n");
+			return EXECUTION_TERMINATE;
+
+		} else {
 			return EXECUTION_TERMINATE;
 		}
 	}
 
 	virtual unsigned int TranslationError(void *ctx, void *address) {
-		printf("Error issued at address %p\n", address);
-		auto direction = ExecutionEnd(ctx);
-		if (direction == EXECUTION_RESTART) {
-			printf("Restarting after issue\n");
-		}
-		printf("Translation error. Exiting ...\n");
 		exit(1);
-		return direction;
+		return EXECUTION_TERMINATE;
 	}
 
 	CustomObserver() {
@@ -233,9 +251,7 @@ void ReadFromFileAndExecute(FILE* inputFile, int sizeToRead = -1)
 
 	observer.fileName = "stdin";
 
-	//gLog.Log("executing..\n");
 	ctrl->Execute();
-	//gLog.Log("waiting for termination..\n");
 	ctrl->WaitForTermination();
 }
 
@@ -466,7 +482,7 @@ int main(int argc, const char *argv[]) {
 	if (opt.isSet("--batch")) {
 		batched = true;
 		freopen(NULL, "rb", stdin);
-		
+
 		while (!feof(stdin)) {
 			CorpusItemHeader header;
 			if ((1 == fread(&header, sizeof(header), 1, stdin)) &&
@@ -480,32 +496,26 @@ int main(int argc, const char *argv[]) {
 			}
 		}
 
-	} 
+	}
 	else if (opt.isSet("--flow")) {
 		flowMode = true;
+		freopen(NULL, "rb", stdin);
 		// Input protocol [payload input Size  |  [task_op | payload - if taskOp == E_NEXT_OP_TASK]+ ]
 		// Expecting the size of each task first then the stream of tasks
 
-		unsigned int payloadInputSizePerTask = -1;
-		fread(&payloadInputSizePerTask, sizeof(payloadInputSizePerTask), 1, stdin);				
-		gLog.Log ("size of payload %d \n", payloadInputSizePerTask);
+		fread(&payloadInputSizePerTask, sizeof(unsigned int), 1, stdin);
+		gLog.Log ("size of payload %u \n", payloadInputSizePerTask);
 
-		enum FlowOpCode
-		{
-			E_NEXTOP_CLOSE,
-			E_NEXTOP_TASK
-		};
-
-		FlowOpCode nextOp = E_NEXTOP_TASK;
-		while(true)
-		{
+		// flowMode may be modified in ExecutionEnd
+		while (!feof(stdin) && flowMode) {
+			FlowOpCode nextOp = E_NEXTOP_TASK;
 			fread(&nextOp, sizeof(char), 1, stdin);
 			gLog.Log("NNext op code %d\n" , nextOp);
-			
+
 			if (nextOp == 0) {
-				gLog.Log("Stopping");
+				gLog.Log("Stopping\n");
 				break;
-			} 
+			}
 			else if (nextOp == 1){
 				gLog.Log("### Executing a new task\n");
 				ReadFromFileAndExecute(stdin, payloadInputSizePerTask);
@@ -514,7 +524,7 @@ int main(int argc, const char *argv[]) {
 			else{
 				gLog.Log("invalid next op value !! probably the data stream is corrupted\n");
 				break;
-			}			
+			}
 		}
 	}
 	else {
