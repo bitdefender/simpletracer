@@ -248,11 +248,6 @@ void ReadFromFileAndExecute(FILE* inputFile, int sizeToRead = -1)
 			fread(buff, sizeof(char), sizeToRead, inputFile);
 		}
 	} while (!feof(inputFile) && readUntilEOF);
-
-	observer.fileName = "stdin";
-
-	ctrl->Execute();
-	ctrl->WaitForTermination();
 }
 
 int main(int argc, const char *argv[]) {
@@ -518,9 +513,16 @@ int main(int argc, const char *argv[]) {
 			}
 			else if (nextOp == 1){
 				gLog.Log("### Executing a new task\n");
+
 				ReadFromFileAndExecute(stdin, payloadInputSizePerTask);
+
+				observer.fileName = "stdin";
+
+				ctrl->Execute();
+				ctrl->WaitForTermination();
+
 				gLog.Log("###Finished executing the task\n");
-			}
+      }
 			else{
 				gLog.Log("invalid next op value !! probably the data stream is corrupted\n");
 				break;
