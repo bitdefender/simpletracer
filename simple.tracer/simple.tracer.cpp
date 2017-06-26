@@ -312,7 +312,7 @@ int main(int argc, const char *argv[]) {
 	std::cout << "Starting " << ((executionType == EXECUTION_EXTERNAL) ? "extern" : "internal") << " tracing on module " << fModule << "\n";
 
 	if (executionType == EXECUTION_INPROCESS) {
-		lib_t hModule = GET_LIB_HANDLER2(fModule.c_str());
+		LIB_T hModule = GET_LIB_HANDLER2(fModule.c_str());
 		if (nullptr == hModule) {
 			std::cout << "Payload not found" << std::endl;
 			return 0;
