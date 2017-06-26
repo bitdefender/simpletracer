@@ -22,7 +22,6 @@ class BinLogWriter {
 private:
 	FILE *fLog;
 	char lastModule[4096];
-	Logger& logger;
 
 	// Variables below are used for buffering mode. 
 	// The reason i need buffering is that communication to the tracer.simple process are done by pipes and we can't seek in a pipe.
@@ -34,7 +33,7 @@ private:
 
 
 public:
-	BinLogWriter(FILE *log, bool shouldBufferEntries, Logger& logger);
+	BinLogWriter(FILE *log, const bool shouldBufferEntries);
 	virtual ~BinLogWriter();
 	bool WriteEntry(const char *module, unsigned int offset, unsigned int cost);
 
