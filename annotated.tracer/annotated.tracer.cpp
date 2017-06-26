@@ -2,7 +2,7 @@
 #include "BinLog.h"
 #include "Execution/Execution.h"
 #include "CommonCrossPlatform/Common.h"
-#include "revtracer/river.h"
+#include "revtracer/revtracer.h"
 #include "SymbolicEnvironment/Environment.h"
 
 #ifdef _WIN32
@@ -10,7 +10,6 @@
 #define LIB_EXT ".dll"
 #else
 #define LIB_EXT ".so"
-extern "C" void patch__rtld_global_ro();
 #endif
 
 unsigned int varCount = 1;
@@ -238,7 +237,7 @@ public :
 		lastCondition[0] = lastCondition[1] = lastCondition[2] = nullptr;
 	}
 
-	virtual void *CreateVariable(const char *name, rev::DWORD size) {
+	virtual void *CreateVariable(const char *name, DWORD size) {
 		BitMap *bmp = new BitMap(varCount, 1);
 		bmp->SetBit(atoi(&name[2]));
 
@@ -250,12 +249,12 @@ public :
 		return bmp;
 	}
 
-	virtual void *MakeConst(rev::DWORD value, rev::DWORD bits) {
+	virtual void *MakeConst(DWORD value, DWORD bits) {
 		bitMapZero->AddRef();
 		return bitMapZero;
 	}
 
-	virtual void *ExtractBits(void *expr, rev::DWORD lsb, rev::DWORD size) {
+	virtual void *ExtractBits(void *expr, DWORD lsb, DWORD size) {
 		BitMap *bmp = (BitMap *)expr;
 
 		if (nullptr == bmp) {
@@ -361,8 +360,8 @@ public :
 		BitMap *lastOp = nullptr;
 
 		for (int i = 0; i < 4; ++i) {
-			rev::BOOL isTracked;
-			rev::DWORD val;
+			BOOL isTracked;
+			DWORD val;
 			void *opVal;
 			if (true == (ops.useOp[i] = env->GetOperand(i, isTracked, val, opVal))) {
 				if (isTracked) {
@@ -378,8 +377,8 @@ public :
 		}
 
 		for (int i = 0; i < flagCount; ++i) {
-			rev::BOOL isTracked;
-			rev::BYTE val;
+			BOOL isTracked;
+			BYTE val;
 			void *opVal;
 			if (true == (ops.useFlag[i] = env->GetFlgValue(flagList[i], isTracked, val, opVal))) {
 				if (isTracked) {
@@ -668,6 +667,17 @@ public :
 		return EXECUTION_TERMINATE;
 	}
 
+	virtual unsigned int TranslationError(void *ctx, void *address) {
+		printf("Error issued at address %p\n", address);
+		auto direction = ExecutionEnd(ctx);
+		if (direction == EXECUTION_RESTART) {
+			printf("Restarting after issue\n");
+		}
+		printf("Translation error. Exiting ...\n");
+		exit(1);
+		return direction;
+	}
+
 	CustomObserver() {
 		fBlocks = nullptr;
 		binOut = false;
@@ -800,7 +810,7 @@ int main(int argc, const char *argv[]) {
 	std::string fModule;
 	opt.get("-p")->getString(fModule);
 	std::cout << "Using payload " << fModule << std::endl;
-	lib_t hModule = GET_LIB_HANDLER(fModule.c_str());
+	LIB_T hModule = GET_LIB_HANDLER(fModule.c_str());
 	if (nullptr == hModule) {
 		std::cout << "Payload not found" << std::endl;
 		return 0;
@@ -837,15 +847,12 @@ int main(int argc, const char *argv[]) {
 	FOPEN(observer.fBlocks, fName.c_str(), observer.binOut ? "wb" : "wt");
 
 	if (observer.binOut) {
-		observer.blw = new BinLogWriter(observer.fBlocks);
+		observer.blw = new BinLogWriter(observer.fBlocks, false);
 	}
 		
 	if (opt.isSet("-m")) {
 		opt.get("-m")->getString(observer.patchFile);
 	}
-#ifdef __linux__
-	patch__rtld_global_ro();
-#endif
 
 	ctrl->SetEntryPoint((void*)Payload);
 	
