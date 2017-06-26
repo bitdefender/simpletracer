@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-[ "$1" != "" ] || [ "$2" != "" ] || { echo "Usage: $0 <branch-name>" >&2; exit 1; }
+[ $# -ne 2 ] && { echo "Usage: $0 <branch-name> <release-version>" >&2; exit 1; }
 CWD=`pwd`
 SD="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
 SRC_DIR=$CWD
