@@ -19,8 +19,11 @@ ELSE ()
 ENDIF ()
 
 # check dependencies
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/river.sdk/include)
 
 # build targets
+add_subdirectory (logger)
+add_subdirectory (format.handler)
 add_subdirectory (simple.tracer)
 add_subdirectory (annotated.tracer)
