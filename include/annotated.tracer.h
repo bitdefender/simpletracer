@@ -1,25 +1,29 @@
-#ifndef __SIMPLE_TRACER__
-#define __SIMPLE_TRACER__
+#ifndef __ANNOTATED_TRACER__
+#define __ANNOTATED_TRACER__
+
+#include "ezOptionParser.h"
 
 #include "AbstractLog.h"
+
+#include "BitMap.h"
+#include "TrackingExecutor.h"
 
 #include "Execution/Execution.h"
 #include "CommonCrossPlatform/Common.h"
 
-#ifdef _WIN32
-#define LIB_EXT ".dll"
-#else
-#define LIB_EXT ".so"
-#endif
+#include "revtracer/revtracer.h"
 
-class SimpleTracer;
+class AnnotatedTracer;
 
 class CustomObserver : public ExecutionObserver {
 	public :
+		FILE *fBlocks;
 		bool binOut;
 
 		AbstractLog *aLog;
 		AbstractFormat *aFormat;
+
+		AnnotatedTracer *at;
 
 		std::string patchFile;
 		ModuleInfo *mInfo;
@@ -27,7 +31,11 @@ class CustomObserver : public ExecutionObserver {
 
 		std::string fileName;
 
-		SimpleTracer *st;
+		bool ctxInit;
+
+		sym::SymbolicEnvironment *regEnv;
+		sym::SymbolicEnvironment *revEnv;
+		TrackingExecutor *executor;
 
 		virtual void TerminationNotification(void *ctx);
 		unsigned int GetModuleOffset(const std::string &module) const;
@@ -37,7 +45,7 @@ class CustomObserver : public ExecutionObserver {
 		virtual unsigned int ExecutionEnd(void *ctx);
 		virtual unsigned int TranslationError(void *ctx, void *address);
 
-		CustomObserver(SimpleTracer *st);
+		CustomObserver(AnnotatedTracer *at);
 		~CustomObserver();
 };
 
@@ -46,21 +54,29 @@ struct CorpusItemHeader {
 	unsigned int size;
 };
 
-class SimpleTracer {
+class AnnotatedTracer {
 	public:
-		ExecutionController *ctrl = NULL;
+
 		bool batched = false;
 
-		typedef int(*PayloadHandlerFunc)();
+		unsigned int varCount = 1;
+		ExecutionController *ctrl = NULL;
+
+		typedef int(*PayloadFunc)();
 		char *payloadBuff = nullptr;
-		PayloadHandlerFunc PayloadHandler = nullptr;
+		PayloadFunc Payload = nullptr;
+
+		BitMap *bitMapZero;
 
 		CustomObserver observer;
 
-		int Run(ez::ezOptionParser &opt);
+		unsigned int ComputeVarCount();
 
-		SimpleTracer();
-		~SimpleTracer();
+		void SymbolicSetup(rev::SymbolicHandlerFunc symb);
+
+		AnnotatedTracer();
+		~AnnotatedTracer();
 };
+
 
 #endif
