@@ -5,6 +5,7 @@
 
 #include "SymbolicEnvironment/Environment.h"
 
+#include "TrackingExecutor.h"
 #include "annotated.tracer.h"
 
 #ifdef _WIN32
@@ -123,7 +124,8 @@ unsigned int CustomObserver::ExecutionBegin(void *ctx, void *address) {
 
 		revEnv = NewX86RevtracerEnvironment(ctx, at->ctrl); //new RevSymbolicEnvironment(ctx, at->ctrl);
 		regEnv = NewX86RegistersEnvironment(revEnv); //new OverlappedRegistersEnvironment();
-		executor = new TrackingExecutor(regEnv);
+		//TODO: is this legit?
+		executor = new TrackingExecutor(regEnv, at);
 		regEnv->SetExecutor(executor);
 		regEnv->SetReferenceCounting(AddReference, DelReference);
 
@@ -226,7 +228,7 @@ CustomObserver::CustomObserver(AnnotatedTracer *at) {
 	regEnv = nullptr;
 	revEnv = nullptr;
 
-  this->at = at;
+	this->at = at;
 }
 
 CustomObserver::~CustomObserver() {
@@ -258,7 +260,7 @@ void AnnotatedTracer::SymbolicSetup(rev::SymbolicHandlerFunc symb) {
 		return;
 
 	ctrl->SetExecutionFeatures(TRACER_FEATURE_SYMBOLIC);
- 	ctrl->SetSymbolicHandler(symb);
+	ctrl->SetSymbolicHandler(symb);
 }
 
 AnnotatedTracer::AnnotatedTracer()

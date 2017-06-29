@@ -1,10 +1,20 @@
-TrackingExecutor::TrackingExecutor(sym::SymbolicEnvironment *e) : SymbolicExecutor(e) {
+#include "SymbolicEnvironment/Environment.h"
+
+#include "TrackingExecutor.h"
+#include "annotated.tracer.h"
+
+#include <stdlib.h>
+#include <stdio.h>
+
+TrackingExecutor::TrackingExecutor(sym::SymbolicEnvironment *e,
+		AnnotatedTracer *at)
+	: SymbolicExecutor(e), at(at) {
 	condCount = 0;
 	lastCondition[0] = lastCondition[1] = lastCondition[2] = nullptr;
 }
 
-virtual void *TrackingExecutor::CreateVariable(const char *name, DWORD size) {
-	BitMap *bmp = new BitMap(varCount, 1);
+void *TrackingExecutor::CreateVariable(const char *name, DWORD size) {
+	BitMap *bmp = new BitMap(at->varCount, 1);
 	bmp->SetBit(atoi(&name[2]));
 
 	printf("Creating variable %s => ", name);
@@ -15,12 +25,12 @@ virtual void *TrackingExecutor::CreateVariable(const char *name, DWORD size) {
 	return bmp;
 }
 
-virtual void *TrackingExecutor::MakeConst(DWORD value, DWORD bits) {
-	bitMapZero->AddRef();
-	return bitMapZero;
+void *TrackingExecutor::MakeConst(DWORD value, DWORD bits) {
+	at->bitMapZero->AddRef();
+	return at->bitMapZero;
 }
 
-virtual void *TrackingExecutor::ExtractBits(void *expr, DWORD lsb, DWORD size) {
+void *TrackingExecutor::ExtractBits(void *expr, DWORD lsb, DWORD size) {
 	BitMap *bmp = (BitMap *)expr;
 
 	if (nullptr == bmp) {
@@ -38,7 +48,7 @@ virtual void *TrackingExecutor::ExtractBits(void *expr, DWORD lsb, DWORD size) {
 	return ret;
 }
 
-virtual void *TrackingExecutor::ConcatBits(void *expr1, void *expr2) {
+void *TrackingExecutor::ConcatBits(void *expr1, void *expr2) {
 	BitMap *bmp1 = (BitMap *)expr1;
 	BitMap *bmp2 = (BitMap *)expr2;
 
@@ -47,13 +57,13 @@ virtual void *TrackingExecutor::ConcatBits(void *expr1, void *expr2) {
 			return nullptr;
 		}
 
-		bitMapZero->AddRef();
-		bmp1 = bitMapZero;
+		at->bitMapZero->AddRef();
+		bmp1 = at->bitMapZero;
 	}
 
 	if (nullptr == bmp2) {
-		bitMapZero->AddRef();
-		bmp2 = bitMapZero;
+		at->bitMapZero->AddRef();
+		bmp2 = at->bitMapZero;
 	}
 
 	BitMap *ret = new BitMap(*bmp1, *bmp2);
@@ -95,7 +105,7 @@ void TrackingExecutor::ResetCond() {
 	condCount = 0;
 }
 
-virtual void TrackingExecutor::Execute(RiverInstruction *instruction) {
+void TrackingExecutor::Execute(RiverInstruction *instruction) {
 	static const unsigned char flagList[] = {
 		RIVER_SPEC_FLAG_CF,
 		RIVER_SPEC_FLAG_PF,
@@ -125,8 +135,8 @@ virtual void TrackingExecutor::Execute(RiverInstruction *instruction) {
 				trk++;
 				lastOp = ops.operands[i];
 			} else {
-				bitMapZero->AddRef();
-				ops.operands[i] = bitMapZero;
+				at->bitMapZero->AddRef();
+				ops.operands[i] = at->bitMapZero;
 			}
 		}
 	}
@@ -142,8 +152,8 @@ virtual void TrackingExecutor::Execute(RiverInstruction *instruction) {
 				trk++;
 				lastOp = ops.flags[i];
 			} else {
-				bitMapZero->AddRef();
-				ops.operands[i] = bitMapZero;
+				at->bitMapZero->AddRef();
+				ops.operands[i] = at->bitMapZero;
 			}
 		}
 	}
@@ -171,7 +181,7 @@ virtual void TrackingExecutor::Execute(RiverInstruction *instruction) {
 			lastOp->AddRef();
 			ret = lastOp;
 		} else {
-			ret = new BitMap(varCount, 1);
+			ret = new BitMap(at->varCount, 1);
 
 			for (int i = 0; i < 4; ++i) {
 				if (ops.useOp[i]) {

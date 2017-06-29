@@ -1,3 +1,7 @@
+#include "BitMap.h"
+
+#include <stdio.h>
+#include "CommonCrossPlatform/Common.h"
 
 inline void BitMap::Init(unsigned int size, unsigned int rows) {
 	sz = size;
@@ -7,14 +11,14 @@ inline void BitMap::Init(unsigned int size, unsigned int rows) {
 
 	refCount = 1;
 
-	printf("Create [%d,%d,%d]", sz, varCount, rw);
+	printf("Create [%d,%d]", sz, rw);
 	Print();
 	printf("\n");
 
 	instCount++;
 }
 
-static BitMap *BitMap::Union(const BitMap &b1, const BitMap &b2) {
+BitMap *BitMap::Union(const BitMap &b1, const BitMap &b2) {
 	if ((b1.sz != b2.sz) || (b1.rw != b1.rw)) {
 		return nullptr;
 	}

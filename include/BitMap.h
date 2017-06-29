@@ -1,5 +1,10 @@
 #ifndef __BITMAP__
 #define __BITMAP__
+
+#include <vector>
+
+class AnnotatedTracer;
+
 class BitMap {
 private :
 	unsigned int sz;

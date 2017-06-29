@@ -3,6 +3,6 @@
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -g -m32 -std=c++11 -D__cdecl=\"\" -D__stdcall=\"\"")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -m32 -std=c++11 -D__cdecl=\"\" -D__stdcall=\"\"")
 
-add_library(annotated.tracer STATIC annotated.tracer.cpp)
+add_library(annotated.tracer STATIC TrackingExecutor.cpp BitMap.cpp annotated.tracer.cpp)
 
 install (TARGETS annotated.tracer DESTINATION ${CMAKE_INSTALL_PREFIX}/lib)
