@@ -173,7 +173,7 @@ unsigned int CustomObserver::ExecutionControl(void *ctx, void *address) {
 			}
 
 			if (bPrint) {
-				fprintf(fBlocks, "Using variable s[%d]\n", i);
+				aFormat->WriteInputUsage(i);
 			}
 		}
 	}
@@ -206,7 +206,6 @@ unsigned int CustomObserver::ExecutionEnd(void *ctx) {
 
 		return EXECUTION_TERMINATE;
 	} else {
-		//fflush(fBlocks);
 		return EXECUTION_TERMINATE;
 	}
 }
@@ -223,7 +222,6 @@ unsigned int CustomObserver::TranslationError(void *ctx, void *address) {
 }
 
 CustomObserver::CustomObserver(AnnotatedTracer *at) {
-	fBlocks = nullptr;
 	binOut = false;
 
 	ctxInit = false;
@@ -376,7 +374,6 @@ int AnnotatedTracer::Run(ez::ezOptionParser &opt) {
 	DeleteExecutionController(ctrl);
 	ctrl = NULL;
 
-	fclose(observer.fBlocks);
 	return 0;
 }
 

@@ -145,7 +145,6 @@ unsigned int CustomObserver::ExecutionEnd(void *ctx) {
 
 		return EXECUTION_TERMINATE;
 	} else {
-		//fflush(fBlocks);
 		return EXECUTION_TERMINATE;
 	}
 }

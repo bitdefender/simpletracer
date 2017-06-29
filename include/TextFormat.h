@@ -20,6 +20,9 @@ public :
 		unsigned int cost,
 		unsigned int jumpType
 	);
+
+	virtual bool WriteInputUsage(unsigned int offset);
+	unsigned int WriteVariables(char * line, unsigned int sz);
 };
 
 #endif

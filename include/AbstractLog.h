@@ -20,6 +20,8 @@ public :
 	virtual bool Flush() = 0;
 };
 
+#define MAX_VARCOUNT 1024
+
 class AbstractFormat {
 protected :
 	AbstractLog *log;
@@ -40,11 +42,9 @@ public :
 		unsigned int jumpType
 	) = 0;
 
-	/*virtual bool WriteInputUsage(
-	unsigned int offset
-	) = 0;
+	virtual bool WriteInputUsage(unsigned int offset) = 0;
 
-	virtual bool WriteTestResult(
+	/*virtual bool WriteTestResult(
 	) = 0;*/
 };
 
