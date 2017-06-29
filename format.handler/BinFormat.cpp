@@ -50,6 +50,16 @@ bool BinFormat::WriteTestName(
 	return true;
 }
 
+bool BinFormat::WriteInputUsage(unsigned int offset) {
+	BinLogEntry bleo;
+	bleo.header.entryType = ENTRY_TYPE_INPUT_USAGE;
+	bleo.header.entryLength = sizeof(bleo.data.asInputUsage);
+	bleo.data.asInputUsage.offset = offset;
+
+	log->WriteBytes((unsigned char *)&bleo, sizeof(bleo));
+	return true;
+}
+
 /*bool BinLog::_OpenLog() {
 	fLog = fopen(logName, "wb");
 

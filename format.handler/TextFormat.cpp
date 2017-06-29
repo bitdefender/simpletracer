@@ -21,6 +21,13 @@ bool TextFormat::WriteBasicBlock(const char *module, unsigned int offset, unsign
 	return true;
 }
 
+bool TextFormat::WriteInputUsage(unsigned int offset) {
+	char line[30];
+	int sz = sprintf(line, "Input offsets used: s[%d]\n", offset);
+	log->WriteBytes((unsigned char *)line, sz);
+	return true;
+}
+
 /*void TextLog::FlushLog() {
 	fflush(fLog);
 }*/

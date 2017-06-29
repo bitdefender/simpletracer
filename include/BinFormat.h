@@ -8,6 +8,7 @@
 #define ENTRY_TYPE_TEST_NAME 0x0010
 #define ENTRY_TYPE_BB_MODULE 0x00B0
 #define ENTRY_TYPE_BB_OFFSET 0x00BB
+#define ENTRY_TYPE_INPUT_USAGE 0x00AA
 
 struct BinLogEntryHeader {
 	unsigned short entryType;
@@ -25,7 +26,11 @@ struct BinLogEntry {
 			unsigned short cost;
 			unsigned short jumpType;
 		} asBBOffset;
-	
+
+		struct AsInputUsage {
+			unsigned int offset;
+		} asInputUsage;
+
 		/*struct AsBBModule {
 			unsigned short modNameLength;
 		} asBBModule;
@@ -65,6 +70,9 @@ public :
 		unsigned int cost,
 		unsigned int jumpType
 	);
+
+
+	virtual bool WriteInputUsage(unsigned int offset);
 };
 
 #endif
