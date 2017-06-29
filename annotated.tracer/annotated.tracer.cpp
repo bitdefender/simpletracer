@@ -10,11 +10,11 @@
 
 #ifdef _WIN32
 #include <Windows.h>
-#define LIB_EXT ".dll"
+#define GET_LIB_HANDLER2(libname) LoadLibraryA((libname))
 #else
-#define LIB_EXT ".so"
-#endif
+#define GET_LIB_HANDLER2(libname) dlopen((libname), RTLD_LAZY)
 
+#endif
 #define MAX_BUFF 4096
 
 
@@ -256,24 +256,127 @@ unsigned int AnnotatedTracer::ComputeVarCount() {
 	return buff - payloadBuff - 1;
 }
 
-void AnnotatedTracer::SymbolicSetup(rev::SymbolicHandlerFunc symb) {
-	varCount = ComputeVarCount();
-
-	if (ctrl == nullptr)
-		return;
-
-	ctrl->SetExecutionFeatures(TRACER_FEATURE_SYMBOLIC);
-	ctrl->SetSymbolicHandler(symb);
+void AnnotatedTracer::SetSymbolicHandler(rev::SymbolicHandlerFunc symb) {
+	this->symb = symb;
 }
 
 AnnotatedTracer::AnnotatedTracer()
-	: observer(this)
+	: observer(this), batched(false), ctrl(nullptr), varCount(1),
+	payloadBuff(nullptr), PayloadHandler(nullptr), bitMapZero(nullptr)
 { }
 
 AnnotatedTracer::~AnnotatedTracer()
 {}
 
 int AnnotatedTracer::Run(ez::ezOptionParser &opt) {
+	uint32_t executionType = EXECUTION_INPROCESS;
+
+	if (opt.isSet("--extern")) {
+		executionType = EXECUTION_EXTERNAL;
+	}
+
+	ctrl = NewExecutionController(executionType);
+
+	std::string fModule;
+	opt.get("-p")->getString(fModule);
+	std::cout << "Using payload " << fModule << std::endl;
+	if (executionType == EXECUTION_EXTERNAL)
+		std::cout << "Starting " << ((executionType == EXECUTION_EXTERNAL) ? "extern" : "internal") << " tracing on module " << fModule << "\n";
+
+	if (executionType == EXECUTION_INPROCESS) {
+		LIB_T hModule = GET_LIB_HANDLER2(fModule.c_str());
+		if (nullptr == hModule) {
+			std::cout << "Payload not found" << std::endl;
+			return 0;
+		}
+
+		payloadBuff = (char *)LOAD_PROC(hModule, "payloadBuffer");
+		PayloadHandler = (PayloadHandlerFunc)LOAD_PROC(hModule, "Payload");
+
+		if ((nullptr == payloadBuff) || (nullptr == PayloadHandler)) {
+			std::cout << "Payload imports not found" << std::endl;
+			return 0;
+		}
+	}
+
+
+	if (opt.isSet("--binlog")) {
+		observer.binOut = true;
+	}
+
+	std::string fName;
+	opt.get("-o")->getString(fName);
+	std::cout << "Writing " << (observer.binOut ? "binary" : "text") << " output to " << fName << std::endl;
+
+	FileLog *flog = new FileLog();
+	flog->SetLogFileName(fName.c_str());
+	observer.aLog = flog;
+
+	if (observer.binOut) {
+		observer.aFormat = new BinFormat(observer.aLog);
+	} else {
+		observer.aFormat = new TextFormat(observer.aLog);
+	}
+
+	varCount = ComputeVarCount();
+
+	if (opt.isSet("-m")) {
+		opt.get("-m")->getString(observer.patchFile);
+	}
+
+	if (executionType == EXECUTION_INPROCESS) {
+		ctrl->SetEntryPoint((void*)PayloadHandler);
+	} else if (executionType == EXECUTION_EXTERNAL) {
+		wchar_t ws[4096];
+		std::mbstowcs(ws, fModule.c_str(), fModule.size() + 1);
+		std::cout << "Converted module name [" << fModule << "] to wstring [";
+		std::wcout << std::wstring(ws) << "]\n";
+		ctrl->SetPath(std::wstring(ws));
+	}
+
+	ctrl->SetExecutionFeatures(TRACER_FEATURE_SYMBOLIC);
+
+	ctrl->SetExecutionObserver(&observer);
+	ctrl->SetSymbolicHandler(symb);
+
+	if (opt.isSet("--batch")) {
+		batched = true;
+		freopen(NULL, "rb", stdin);
+
+		while (!feof(stdin)) {
+			CorpusItemHeader header;
+			if ((1 == fread(&header, sizeof(header), 1, stdin)) &&
+					(header.size == fread(payloadBuff, 1, header.size, stdin))) {
+				std::cout << "Using " << header.fName << " as input file." << std::endl;
+
+				observer.fileName = header.fName;
+
+				ctrl->Execute();
+				ctrl->WaitForTermination();
+			}
+		}
+
+	} else {
+		char *buff = payloadBuff;
+		unsigned int bSize = MAX_BUFF;
+		do {
+			fgets(buff, bSize, stdin);
+			while (*buff) {
+				buff++;
+				bSize--;
+			}
+		} while (!feof(stdin));
+
+		observer.fileName = "stdin";
+
+		ctrl->Execute();
+		ctrl->WaitForTermination();
+	}
+
+	DeleteExecutionController(ctrl);
+	ctrl = NULL;
+
+	fclose(observer.fBlocks);
 	return 0;
 }
 
