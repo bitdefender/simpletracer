@@ -12,6 +12,8 @@
 
 #include "revtracer/revtracer.h"
 
+namespace at {
+
 class AnnotatedTracer;
 
 class CustomObserver : public ExecutionObserver {
@@ -76,6 +78,8 @@ class AnnotatedTracer {
 		AnnotatedTracer();
 		~AnnotatedTracer();
 };
+
+} //namespace at
 
 
 #endif

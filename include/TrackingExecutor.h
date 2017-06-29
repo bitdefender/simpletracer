@@ -4,16 +4,18 @@
 #include "BitMap.h"
 #include "SymbolicEnvironment/Environment.h"
 
-class AnnotatedTracer;
+namespace at {
+	class AnnotatedTracer;
+}
 
 class TrackingExecutor : public sym::SymbolicExecutor {
 public :
 	BitMap *lastCondition[3];
 	unsigned int condCount;
 
-  AnnotatedTracer *at;
+  at::AnnotatedTracer *at;
 
-	TrackingExecutor(sym::SymbolicEnvironment *e, AnnotatedTracer *at);
+	TrackingExecutor(sym::SymbolicEnvironment *e, at::AnnotatedTracer *at);
 
 	virtual void *CreateVariable(const char *name, DWORD size);
 

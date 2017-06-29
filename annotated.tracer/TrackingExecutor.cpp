@@ -7,7 +7,7 @@
 #include <stdio.h>
 
 TrackingExecutor::TrackingExecutor(sym::SymbolicEnvironment *e,
-		AnnotatedTracer *at)
+		at::AnnotatedTracer *at)
 	: SymbolicExecutor(e), at(at) {
 	condCount = 0;
 	lastCondition[0] = lastCondition[1] = lastCondition[2] = nullptr;
