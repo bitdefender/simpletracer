@@ -130,7 +130,7 @@ int main(int argc, const char *argv[]) {
 
 	if (opt.isSet("--annotated")) {
 		AT = new at::AnnotatedTracer();
-		AT->SymbolicSetup(SymbolicHandler);
+		AT->SetSymbolicHandler(SymbolicHandler);
 		return AT->Run(opt);
 	} else {
 		st::SimpleTracer *ST = new st::SimpleTracer();

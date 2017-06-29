@@ -14,6 +14,8 @@
 
 namespace at {
 
+typedef int(*PayloadHandlerFunc)();
+
 class AnnotatedTracer;
 
 class CustomObserver : public ExecutionObserver {
@@ -58,27 +60,25 @@ struct CorpusItemHeader {
 class AnnotatedTracer {
 	public:
 
-		bool batched = false;
+		bool batched;
+		unsigned int varCount;
 
-		unsigned int varCount = 1;
-		ExecutionController *ctrl = NULL;
+		ExecutionController *ctrl;
 
-		typedef int(*PayloadFunc)();
-		char *payloadBuff = nullptr;
-		PayloadFunc Payload = nullptr;
+		char *payloadBuff;
+		PayloadHandlerFunc PayloadHandler;
 
 		BitMap *bitMapZero;
 
+		rev::SymbolicHandlerFunc symb;
 		CustomObserver observer;
 
 		unsigned int ComputeVarCount();
-
-		void SymbolicSetup(rev::SymbolicHandlerFunc symb);
+		int Run(ez::ezOptionParser &opt);
+		void SetSymbolicHandler(rev::SymbolicHandlerFunc symb);
 
 		AnnotatedTracer();
 		~AnnotatedTracer();
-
-		int Run(ez::ezOptionParser &opt);
 };
 
 } //namespace at
