@@ -10,11 +10,15 @@
 #include "Execution/Execution.h"
 #include "CommonCrossPlatform/Common.h"
 
+at::AnnotatedTracer *AT = nullptr;
+
 void __stdcall SymbolicHandler(void *ctx, void *offset, void *addr) {
 	RiverInstruction *instr = (RiverInstruction *)addr;
 
-	at->observer.regEnv->SetCurrentInstruction(instr, offset);
-	at->observer.executor->Execute(instr);
+	if (AT != nullptr) {
+		AT->observer.regEnv->SetCurrentInstruction(instr, offset);
+		AT->observer.executor->Execute(instr);
+	}
 }
 
 int main(int argc, const char *argv[]) {
@@ -125,11 +129,11 @@ int main(int argc, const char *argv[]) {
 	}
 
 	if (opt.isSet("--annotated")) {
-		at::AnnotatedTracer *at = new at::AnnotatedTracer();
-		at->SymbolicSetup(SymbolicHandler);
-		return at->Run(opt);
+		AT = new at::AnnotatedTracer();
+		AT->SymbolicSetup(SymbolicHandler);
+		return AT->Run(opt);
 	} else {
-		st::SimpleTracer *st = new st::SimpleTracer();
-		return st->Run(opt);
+		st::SimpleTracer *ST = new st::SimpleTracer();
+		return ST->Run(opt);
 	}
 }

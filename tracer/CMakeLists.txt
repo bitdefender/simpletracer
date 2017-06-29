@@ -9,6 +9,7 @@ find_library (symbolicenvironment libsymbolicenvironment.so)
 
 add_executable (tracer tracer.cpp)
 target_link_libraries (tracer
+  annotated.tracer
   symbolicenvironment
   simple.tracer
   execution
