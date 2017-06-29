@@ -6,7 +6,6 @@
 #include "AbstractLog.h"
 
 #include "BitMap.h"
-#include "TrackingExecutor.h"
 
 #include "Execution/Execution.h"
 #include "CommonCrossPlatform/Common.h"
