@@ -77,6 +77,8 @@ class AnnotatedTracer {
 
 		AnnotatedTracer();
 		~AnnotatedTracer();
+
+		int Run(ez::ezOptionParser &opt);
 };
 
 } //namespace at

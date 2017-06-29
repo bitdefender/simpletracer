@@ -273,4 +273,8 @@ AnnotatedTracer::AnnotatedTracer()
 AnnotatedTracer::~AnnotatedTracer()
 {}
 
+int AnnotatedTracer::Run(ez::ezOptionParser &opt) {
+	return 0;
+}
+
 } // namespace at
