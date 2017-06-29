@@ -3,8 +3,8 @@
 
 #include "FileLog.h"
 
+// annotated tracer dependencies
 #include "SymbolicEnvironment/Environment.h"
-
 #include "TrackingExecutor.h"
 #include "annotated.tracer.h"
 
@@ -16,6 +16,7 @@
 #endif
 
 #define MAX_BUFF 4096
+
 
 // setup static values for BitMap and TrackingExecutor
 
@@ -41,6 +42,8 @@ void AddReference(void *ref) {
 void DelReference(void *ref) {
 	((BitMap *)ref)->DelRef();
 }
+
+namespace at {
 
 void CustomObserver::TerminationNotification(void *ctx) {
 	printf("Process Terminated\n");
@@ -269,3 +272,5 @@ AnnotatedTracer::AnnotatedTracer()
 
 AnnotatedTracer::~AnnotatedTracer()
 {}
+
+} // namespace at

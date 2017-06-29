@@ -1,12 +1,14 @@
 #include "ezOptionParser.h"
 
 #include "simple.tracer.h"
+
+// annotated tracer header dependencies
+#include "SymbolicEnvironment/Environment.h"
+#include "TrackingExecutor.h"
 #include "annotated.tracer.h"
 
 #include "Execution/Execution.h"
 #include "CommonCrossPlatform/Common.h"
-
-#include "SymbolicEnvironment/Environment.h"
 
 void __stdcall SymbolicHandler(void *ctx, void *offset, void *addr) {
 	RiverInstruction *instr = (RiverInstruction *)addr;
@@ -123,11 +125,11 @@ int main(int argc, const char *argv[]) {
 	}
 
 	if (opt.isSet("--annotated")) {
-		AnnotatedTracer *at = new AnnotatedTracer();
+		at::AnnotatedTracer *at = new at::AnnotatedTracer();
 		at->SymbolicSetup(SymbolicHandler);
 		return at->Run(opt);
 	} else {
-		SimpleTracer *st = new SimpleTracer();
+		st::SimpleTracer *st = new st::SimpleTracer();
 		return st->Run(opt);
 	}
 }

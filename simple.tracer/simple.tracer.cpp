@@ -17,7 +17,7 @@
 
 #define MAX_BUFF 4096
 
-
+namespace st {
 
 void CustomObserver::TerminationNotification(void *ctx) {
 	printf("Process Terminated\n");
@@ -283,3 +283,5 @@ SimpleTracer::SimpleTracer() :
   observer(this) {}
 
 SimpleTracer::~SimpleTracer() {}
+
+} //namespace st

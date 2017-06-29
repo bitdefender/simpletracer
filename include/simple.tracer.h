@@ -12,6 +12,8 @@
 #define LIB_EXT ".so"
 #endif
 
+namespace st {
+
 class SimpleTracer;
 
 class CustomObserver : public ExecutionObserver {
@@ -62,5 +64,7 @@ class SimpleTracer {
 		SimpleTracer();
 		~SimpleTracer();
 };
+
+} //namespace st
 
 #endif
