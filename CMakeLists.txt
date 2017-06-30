@@ -23,8 +23,8 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/river.sdk/include)
 
 # build targets
-add_subdirectory (logger)
-add_subdirectory (format.handler)
+add_subdirectory (river.format/logger)
+add_subdirectory (river.format/format.handler)
 add_subdirectory (simple.tracer)
 add_subdirectory (annotated.tracer)
 add_subdirectory (tracer)
