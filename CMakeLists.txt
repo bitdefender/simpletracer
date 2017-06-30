@@ -21,6 +21,7 @@ ENDIF ()
 # check dependencies
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/river.sdk/include)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/river.format/include)
 
 # build targets
 add_subdirectory (river.format/logger)
