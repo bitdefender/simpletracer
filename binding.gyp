@@ -13,7 +13,7 @@
 			"include_dirs": [
 				"./include",
         "./river.format/include",
-        "../../serial.tracer/river.sdk/include/"
+        "./river.sdk/include/"
 			],
       "conditions": [
 				["OS==\"linux\"", {
