@@ -10,6 +10,12 @@
 #include "Execution/Execution.h"
 #include "CommonCrossPlatform/Common.h"
 
+#ifdef _WIN32
+#define LIB_EXT ".dll"
+#else
+#define LIB_EXT ".so"
+#endif
+
 at::AnnotatedTracer *AT = nullptr;
 
 void __stdcall SymbolicHandler(void *ctx, void *offset, void *addr) {

@@ -45,65 +45,6 @@ void DelReference(void *ref) {
 
 namespace at {
 
-void CustomObserver::TerminationNotification(void *ctx) {
-	printf("Process Terminated\n");
-}
-
-unsigned int CustomObserver::GetModuleOffset(const std::string &module) const {
-	const char *m = module.c_str();
-	for (int i = 0; i < mCount; ++i) {
-		if (0 == strcmp(mInfo[i].Name, m)) {
-			return mInfo[i].ModuleBase;
-		}
-	}
-
-	return 0;
-}
-
-bool CustomObserver::PatchLibrary(std::ifstream &fPatch) {
-	std::string line;
-	while (std::getline(fPatch, line)) {
-		bool bForce = false;
-		int nStart = 0;
-
-		// l-trim equivalent
-		while ((line[nStart] == ' ') || (line[nStart] == '\t')) {
-			nStart++;
-		}
-
-		switch (line[nStart]) {
-			case '#' : // comment line
-			case '\n' : // empty line
-				continue;
-			case '!' : // force patch line
-				bForce = true;
-				nStart++;
-				break;
-		}
-
-		int sep = line.find(L'+');
-		int val = line.find(L'=');
-		if ((std::string::npos == sep) || (std::string::npos == val)) {
-			return false;
-		}
-
-		unsigned int module = GetModuleOffset(line.substr(0, sep));
-
-		if (0 == module) {
-			return false;
-		}
-
-		unsigned long offset = std::stoul(line.substr(sep + 1, val), nullptr, 16);
-		unsigned long value = std::stoul(line.substr(val + 1), nullptr, 16);
-
-
-		// TODO: move this to the controller
-		*(unsigned int *)(module + offset) = value;
-	}
-
-	return true;
-}
-
 unsigned int CustomObserver::ExecutionBegin(void *ctx, void *address) {
 	printf("Process starting\n");
 	at->ctrl->GetModules(mInfo, mCount);
@@ -222,8 +163,6 @@ unsigned int CustomObserver::TranslationError(void *ctx, void *address) {
 }
 
 CustomObserver::CustomObserver(AnnotatedTracer *at) {
-	binOut = false;
-
 	ctxInit = false;
 
 	regEnv = nullptr;
@@ -233,8 +172,6 @@ CustomObserver::CustomObserver(AnnotatedTracer *at) {
 }
 
 CustomObserver::~CustomObserver() {
-	delete aLog;
-	delete aFormat;
 }
 
 unsigned int AnnotatedTracer::ComputeVarCount() {
