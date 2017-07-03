@@ -3,14 +3,11 @@
 
 #include "ezOptionParser.h"
 
-#include "AbstractLog.h"
-
 #include "BitMap.h"
 
-#include "Execution/Execution.h"
-#include "CommonCrossPlatform/Common.h"
-
 #include "revtracer/revtracer.h"
+
+#include "basic.observer.h"
 
 namespace at {
 
@@ -18,31 +15,14 @@ typedef int(*PayloadHandlerFunc)();
 
 class AnnotatedTracer;
 
-class CustomObserver : public ExecutionObserver {
-	public :
-		FILE *fBlocks;
-		bool binOut;
-
-		AbstractLog *aLog;
-		AbstractFormat *aFormat;
-
+class CustomObserver : public BasicObserver {
+  public:
 		AnnotatedTracer *at;
-
-		std::string patchFile;
-		ModuleInfo *mInfo;
-		int mCount;
-
-		std::string fileName;
-
-		bool ctxInit;
 
 		sym::SymbolicEnvironment *regEnv;
 		sym::SymbolicEnvironment *revEnv;
 		TrackingExecutor *executor;
 
-		virtual void TerminationNotification(void *ctx);
-		unsigned int GetModuleOffset(const std::string &module) const;
-		bool PatchLibrary(std::ifstream &fPatch);
 		virtual unsigned int ExecutionBegin(void *ctx, void *address);
 		virtual unsigned int ExecutionControl(void *ctx, void *address);
 		virtual unsigned int ExecutionEnd(void *ctx);
