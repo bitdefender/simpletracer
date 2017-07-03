@@ -65,9 +65,9 @@ bool BasicObserver::PatchLibrary(std::ifstream &fPatch) {
 	return true;
 }
 
-BasicObserver::BasicObserver() {
-	binOut = false;
-}
+BasicObserver::BasicObserver()
+	: aLog(nullptr), aFormat(nullptr), binOut(false)
+{ }
 
 BasicObserver::~BasicObserver() {
 	delete aLog;
