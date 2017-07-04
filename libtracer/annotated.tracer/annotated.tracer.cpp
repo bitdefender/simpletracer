@@ -54,12 +54,10 @@ unsigned int CustomObserver::ExecutionBegin(void *ctx, void *address) {
 	}
 
 	if (!ctxInit) {
-		at->bitMapZero = new BitMap(at->varCount, 1);
-
 		revEnv = NewX86RevtracerEnvironment(ctx, at->ctrl); //new RevSymbolicEnvironment(ctx, at->ctrl);
 		regEnv = NewX86RegistersEnvironment(revEnv); //new OverlappedRegistersEnvironment();
 		//TODO: is this legit?
-		executor = new TrackingExecutor(regEnv, at);
+		executor = new TrackingExecutor(regEnv, at->varCount);
 		regEnv->SetExecutor(executor);
 		regEnv->SetReferenceCounting(AddReference, DelReference);
 
@@ -187,7 +185,7 @@ void AnnotatedTracer::SetSymbolicHandler(rev::SymbolicHandlerFunc symb) {
 
 AnnotatedTracer::AnnotatedTracer()
 	: observer(this), batched(false), ctrl(nullptr), varCount(1),
-	payloadBuff(nullptr), PayloadHandler(nullptr), bitMapZero(nullptr)
+	payloadBuff(nullptr), PayloadHandler(nullptr)
 { }
 
 AnnotatedTracer::~AnnotatedTracer()
