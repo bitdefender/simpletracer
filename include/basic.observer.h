@@ -31,6 +31,9 @@ class BasicObserver : public ExecutionObserver {
 
 		BasicObserver();
 		~BasicObserver();
+
+	protected :
+		int HandlePatchLibrary();
 };
 
 #endif

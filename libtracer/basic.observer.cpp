@@ -3,6 +3,7 @@
 
 #include <string>
 #include <fstream>
+#include <iostream>
 
 #include "basic.observer.h"
 
@@ -63,6 +64,25 @@ bool BasicObserver::PatchLibrary(std::ifstream &fPatch) {
 	}
 
 	return true;
+}
+
+int BasicObserver::HandlePatchLibrary() {
+	if (!patchFile.empty()) {
+		std::ifstream fPatch;
+
+		fPatch.open(patchFile);
+
+		if (!fPatch.good()) {
+			std::cout << "Patch file not found" << std::endl;
+			return -1;
+		}
+
+		PatchLibrary(fPatch);
+		fPatch.close();
+
+	}
+
+	return 0;
 }
 
 BasicObserver::BasicObserver()

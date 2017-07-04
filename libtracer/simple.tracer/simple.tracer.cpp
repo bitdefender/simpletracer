@@ -23,19 +23,8 @@ unsigned int CustomObserver::ExecutionBegin(void *ctx, void *address) {
 	printf("Process starting\n");
 	st->ctrl->GetModules(mInfo, mCount);
 
-	if (!patchFile.empty()) {
-		std::ifstream fPatch;
-
-		fPatch.open(patchFile);
-
-		if (!fPatch.good()) {
-			std::cout << "Patch file not found" << std::endl;
-			return EXECUTION_TERMINATE;
-		}
-
-		PatchLibrary(fPatch);
-		fPatch.close();
-
+	if (HandlePatchLibrary() < 0) {
+		return EXECUTION_TERMINATE;
 	}
 
 	rev::BasicBlockInfo bbInfo;
