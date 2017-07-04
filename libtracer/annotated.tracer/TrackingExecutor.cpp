@@ -7,14 +7,16 @@
 #include <stdio.h>
 
 TrackingExecutor::TrackingExecutor(sym::SymbolicEnvironment *e,
-		at::AnnotatedTracer *at)
-	: SymbolicExecutor(e), at(at) {
+		unsigned int varCount)
+	: SymbolicExecutor(e), varCount(varCount) {
 	condCount = 0;
 	lastCondition[0] = lastCondition[1] = lastCondition[2] = nullptr;
+
+	bitMapZero = new BitMap(varCount, 1);
 }
 
 void *TrackingExecutor::CreateVariable(const char *name, DWORD size) {
-	BitMap *bmp = new BitMap(at->varCount, 1);
+	BitMap *bmp = new BitMap(varCount, 1);
 	bmp->SetBit(atoi(&name[2]));
 
 	printf("Creating variable %s => ", name);
@@ -26,8 +28,8 @@ void *TrackingExecutor::CreateVariable(const char *name, DWORD size) {
 }
 
 void *TrackingExecutor::MakeConst(DWORD value, DWORD bits) {
-	at->bitMapZero->AddRef();
-	return at->bitMapZero;
+	bitMapZero->AddRef();
+	return bitMapZero;
 }
 
 void *TrackingExecutor::ExtractBits(void *expr, DWORD lsb, DWORD size) {
@@ -57,13 +59,13 @@ void *TrackingExecutor::ConcatBits(void *expr1, void *expr2) {
 			return nullptr;
 		}
 
-		at->bitMapZero->AddRef();
-		bmp1 = at->bitMapZero;
+		bitMapZero->AddRef();
+		bmp1 = bitMapZero;
 	}
 
 	if (nullptr == bmp2) {
-		at->bitMapZero->AddRef();
-		bmp2 = at->bitMapZero;
+		bitMapZero->AddRef();
+		bmp2 = bitMapZero;
 	}
 
 	BitMap *ret = new BitMap(*bmp1, *bmp2);
@@ -135,8 +137,8 @@ void TrackingExecutor::Execute(RiverInstruction *instruction) {
 				trk++;
 				lastOp = ops.operands[i];
 			} else {
-				at->bitMapZero->AddRef();
-				ops.operands[i] = at->bitMapZero;
+				bitMapZero->AddRef();
+				ops.operands[i] = bitMapZero;
 			}
 		}
 	}
@@ -152,8 +154,8 @@ void TrackingExecutor::Execute(RiverInstruction *instruction) {
 				trk++;
 				lastOp = ops.flags[i];
 			} else {
-				at->bitMapZero->AddRef();
-				ops.operands[i] = at->bitMapZero;
+				bitMapZero->AddRef();
+				ops.operands[i] = bitMapZero;
 			}
 		}
 	}
@@ -181,7 +183,7 @@ void TrackingExecutor::Execute(RiverInstruction *instruction) {
 			lastOp->AddRef();
 			ret = lastOp;
 		} else {
-			ret = new BitMap(at->varCount, 1);
+			ret = new BitMap(varCount, 1);
 
 			for (int i = 0; i < 4; ++i) {
 				if (ops.useOp[i]) {
