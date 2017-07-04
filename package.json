@@ -15,7 +15,7 @@
   "optionalDependencies": {},
   "readme": "ERROR: No README data found!",
   "scripts": {
-    "install": "node-gyp rebuild --verbose"
+    "install": "node-gyp rebuild"
   },
   "version": "0.0.1"
 }
