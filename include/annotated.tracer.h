@@ -48,8 +48,6 @@ class AnnotatedTracer {
 		char *payloadBuff;
 		PayloadHandlerFunc PayloadHandler;
 
-		BitMap *bitMapZero;
-
 		rev::SymbolicHandlerFunc symb;
 		CustomObserver observer;
 
