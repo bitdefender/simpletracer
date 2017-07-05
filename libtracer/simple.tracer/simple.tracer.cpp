@@ -166,7 +166,10 @@ int SimpleTracer::Run( ez::ezOptionParser &opt) {
 
 	if (opt.isSet("--batch")) {
 		batched = true;
-		freopen(NULL, "rb", stdin);
+		FILE *f = freopen(NULL, "rb", stdin);
+		if (f == nullptr) {
+			std::cout << "Stdin reopen failed" << std::endl;
+		}
 
 		while (!feof(stdin)) {
 			CorpusItemHeader header;
@@ -185,7 +188,11 @@ int SimpleTracer::Run( ez::ezOptionParser &opt) {
 		char *buff = payloadBuff;
 		unsigned int bSize = MAX_BUFF;
 		do {
-			fgets(buff, bSize, stdin);
+			char *res = fgets(buff, bSize, stdin);
+			if (res == nullptr) {
+				std::cout << "payloadBuffer read failed" << std::endl;
+			}
+
 			while (*buff) {
 				buff++;
 				bSize--;

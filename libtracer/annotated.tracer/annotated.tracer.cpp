@@ -169,7 +169,11 @@ unsigned int AnnotatedTracer::ComputeVarCount() {
 	char *buff = payloadBuff;
 	unsigned int bSize = MAX_BUFF;
 	do {
-		fgets(buff, bSize, stdin);
+		char *res = fgets(buff, bSize, stdin);
+		if (res == nullptr) {
+			std::cout << "payloadBuffer read failed" << std::endl;
+		}
+
 		while (*buff) {
 			buff++;
 			bSize--;
@@ -184,8 +188,8 @@ void AnnotatedTracer::SetSymbolicHandler(rev::SymbolicHandlerFunc symb) {
 }
 
 AnnotatedTracer::AnnotatedTracer()
-	: observer(this), batched(false), ctrl(nullptr), varCount(1),
-	payloadBuff(nullptr), PayloadHandler(nullptr)
+	: batched(false), varCount(1), ctrl(nullptr), payloadBuff(nullptr),
+	PayloadHandler(nullptr), observer(this)
 { }
 
 AnnotatedTracer::~AnnotatedTracer()
@@ -241,8 +245,6 @@ int AnnotatedTracer::Run(ez::ezOptionParser &opt) {
 		observer.aFormat = new TextFormat(observer.aLog);
 	}
 
-	varCount = ComputeVarCount();
-
 	if (opt.isSet("-m")) {
 		opt.get("-m")->getString(observer.patchFile);
 	}
@@ -264,7 +266,10 @@ int AnnotatedTracer::Run(ez::ezOptionParser &opt) {
 
 	if (opt.isSet("--batch")) {
 		batched = true;
-		freopen(NULL, "rb", stdin);
+		FILE *f = freopen(NULL, "rb", stdin);
+		if (f == nullptr) {
+			std::cout << "stdin freopen failed" << std::endl;
+		}
 
 		while (!feof(stdin)) {
 			CorpusItemHeader header;
@@ -273,6 +278,7 @@ int AnnotatedTracer::Run(ez::ezOptionParser &opt) {
 				std::cout << "Using " << header.fName << " as input file." << std::endl;
 
 				observer.fileName = header.fName;
+				varCount = header.size;
 
 				ctrl->Execute();
 				ctrl->WaitForTermination();
@@ -280,15 +286,7 @@ int AnnotatedTracer::Run(ez::ezOptionParser &opt) {
 		}
 
 	} else {
-		char *buff = payloadBuff;
-		unsigned int bSize = MAX_BUFF;
-		do {
-			fgets(buff, bSize, stdin);
-			while (*buff) {
-				buff++;
-				bSize--;
-			}
-		} while (!feof(stdin));
+		varCount = ComputeVarCount();
 
 		observer.fileName = "stdin";
 

@@ -25,7 +25,6 @@ unsigned int BasicObserver::GetModuleOffset(const std::string &module) const {
 bool BasicObserver::PatchLibrary(std::ifstream &fPatch) {
 	std::string line;
 	while (std::getline(fPatch, line)) {
-		bool bForce = false;
 		int nStart = 0;
 
 		// l-trim equivalent
@@ -38,13 +37,12 @@ bool BasicObserver::PatchLibrary(std::ifstream &fPatch) {
 			case '\n' : // empty line
 				continue;
 			case '!' : // force patch line
-				bForce = true;
 				nStart++;
 				break;
 		}
 
-		int sep = line.find(L'+');
-		int val = line.find(L'=');
+		unsigned int sep = line.find(L'+');
+		unsigned int val = line.find(L'=');
 		if ((std::string::npos == sep) || (std::string::npos == val)) {
 			return false;
 		}
@@ -86,7 +84,7 @@ int BasicObserver::HandlePatchLibrary() {
 }
 
 BasicObserver::BasicObserver()
-	: aLog(nullptr), aFormat(nullptr), binOut(false)
+	: binOut(false), aLog(nullptr), aFormat(nullptr)
 { }
 
 BasicObserver::~BasicObserver() {
