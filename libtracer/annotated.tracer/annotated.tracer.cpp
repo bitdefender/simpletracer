@@ -117,7 +117,8 @@ unsigned int CustomObserver::ExecutionControl(void *ctx, void *address) {
 			(-1 == foundModule) ? unkmod : mInfo[foundModule].Name,
 			offset,
 			bbInfo.cost,
-			0
+			bbInfo.branchType,
+			bbInfo.branchInstruction
 			);
 	return EXECUTION_ADVANCE;
 }
