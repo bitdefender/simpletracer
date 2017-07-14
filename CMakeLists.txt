@@ -16,12 +16,15 @@ ELSE ()
 	execute_process (COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/scripts/libs.sh teodor-stoenescu simpletracer ${RIVER_SDK_VERSION} river.sdk.zip ${CMAKE_BINARY_DIR}/river.sdk.zip)
 	execute_process (COMMAND unzip ${CMAKE_BINARY_DIR}/river.sdk.zip -d ${CMAKE_CURRENT_SOURCE_DIR}/river.sdk)
 	execute_process (COMMAND rm ${CMAKE_BINARY_DIR}/river.sdk.zip)
-
-	execute_process (COMMAND find /lib -name libc.so.6 -path *i386* OUTPUT_VARIABLE LIBC_PATH)
-	string (STRIP ${LIBC_PATH} LIBC_PATH)
-	execute_process (COMMAND ln -s -T ${LIBC_PATH} ${CMAKE_INSTALL_PREFIX}/lib/libc.so.6)
 ENDIF ()
 
 # check dependencies
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/river.sdk/include)
-add_subdirectory (simple.tracer)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/river.format/include)
+
+# build targets
+add_subdirectory (river.format/logger)
+add_subdirectory (river.format/format.handler)
+add_subdirectory (libtracer)
+add_subdirectory (river.tracer)
