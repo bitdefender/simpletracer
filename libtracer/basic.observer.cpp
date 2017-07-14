@@ -8,7 +8,6 @@
 #include "basic.observer.h"
 
 void BasicObserver::TerminationNotification(void *ctx) {
-	printf("Process Terminated\n");
 }
 
 unsigned int BasicObserver::GetModuleOffset(const std::string &module) const {
@@ -71,7 +70,7 @@ int BasicObserver::HandlePatchLibrary() {
 		fPatch.open(patchFile);
 
 		if (!fPatch.good()) {
-			std::cout << "Patch file not found" << std::endl;
+			std::cerr << "Patch file not found" << std::endl;
 			return -1;
 		}
 

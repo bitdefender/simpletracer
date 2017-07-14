@@ -1,6 +1,7 @@
 #ifndef __SIMPLE_TRACER__
 #define __SIMPLE_TRACER__
 
+#include "Logger.h"
 #include "basic.observer.h"
 
 namespace st {
@@ -46,6 +47,8 @@ class SimpleTracer {
 		PayloadHandlerFunc PayloadHandler = nullptr;
 
 		CustomObserver observer;
+
+		Logger globalLog;
 
 		void ReadFromFile(FILE* inputFile, int sizeToRead=-1);
 		int Run(ez::ezOptionParser &opt);

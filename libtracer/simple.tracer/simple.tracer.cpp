@@ -20,7 +20,7 @@
 namespace st {
 
 unsigned int CustomObserver::ExecutionBegin(void *ctx, void *address) {
-	printf("Process starting\n");
+	st->globalLog.Log("Process starting\n");
 	st->ctrl->GetModules(mInfo, mCount);
 
 	if (HandlePatchLibrary() < 0) {
@@ -68,7 +68,7 @@ unsigned int CustomObserver::ExecutionEnd(void *ctx) {
 		CorpusItemHeader header;
 		if ((1 == fread(&header, sizeof(header), 1, stdin)) &&
 				(header.size == fread(st->payloadBuff, 1, header.size, stdin))) {
-			std::cout << "Using " << header.fName << " as input file." << std::endl;
+			st->globalLog.Log("Using %s as input file.\n", header.fName);
 
 			aFormat->WriteTestName(header.fName);
 			return EXECUTION_RESTART;
@@ -76,25 +76,25 @@ unsigned int CustomObserver::ExecutionEnd(void *ctx) {
 
 		return EXECUTION_TERMINATE;
 	} else if (st->flowMode) {
-		printf("On flow mode restart\n");
+		st->globalLog.Log("On flow mode restart\n");
 
 		FlowOpCode nextOp = E_NEXTOP_TASK;
 		fread(&nextOp, sizeof(char), 1, stdin);
-		printf("NNext op code %d\n" , nextOp);
+		st->globalLog.Log("NNext op code %d\n" , nextOp);
 
 		if (nextOp == 0) {
-			printf("Stopping\n");
+			st->globalLog.Log("Stopping\n");
 			st->flowMode = false;
 			return EXECUTION_TERMINATE;
 		} else if (nextOp == 1){
-			printf("### Executing a new task\n");
+			st->globalLog.Log("### Executing a new task\n");
 			st->ReadFromFile(stdin, st->payloadInputSizePerTask);
-			printf("###Finished executing the task\n");
+			st->globalLog.Log("###Finished executing the task\n");
 			aFormat->OnExecutionBegin(nullptr);
 			return EXECUTION_RESTART;
 		}
 
-		printf("invalid next op value !! probably the data stream is corrupted\n");
+		st->globalLog.Log("invalid next op value !! probably the data stream is corrupted\n");
 		return EXECUTION_TERMINATE;
 
 	} else {
@@ -103,12 +103,12 @@ unsigned int CustomObserver::ExecutionEnd(void *ctx) {
 }
 
 unsigned int CustomObserver::TranslationError(void *ctx, void *address) {
-	printf("Error issued at address %p\n", address);
+	st->globalLog.Log("Error issued at address %p\n", address);
 	auto direction = ExecutionEnd(ctx);
 	if (direction == EXECUTION_RESTART) {
-		printf("Restarting after issue\n");
+		st->globalLog.Log("Restarting after issue\n");
 	}
-	printf("Translation error. Exiting ...\n");
+	st->globalLog.Log("Translation error. Exiting ...\n");
 	exit(1);
 	return direction;
 }
@@ -144,6 +144,16 @@ void SimpleTracer::ReadFromFile(FILE* inputFile, int sizeToRead) {
 int SimpleTracer::Run( ez::ezOptionParser &opt) {
 	uint32_t executionType = EXECUTION_INPROCESS;
 
+	// Don't write logs before this check
+	if (!opt.isSet("--disableLogs")) {
+		globalLog.EnableLog();
+	}
+
+	const bool writeLogOnFile = opt.isSet("--writeLogOnFile");
+	if (writeLogOnFile) {
+		globalLog.SetLoggingToFile("log.txt");
+	}
+
 	if (opt.isSet("--extern")) {
 		executionType = EXECUTION_EXTERNAL;
 	}
@@ -152,14 +162,16 @@ int SimpleTracer::Run( ez::ezOptionParser &opt) {
 
 	std::string fModule;
 	opt.get("-p")->getString(fModule);
-	std::cout << "Using payload " << fModule << std::endl;
+	globalLog.Log("Using payload %s\n", fModule);
 	if (executionType == EXECUTION_EXTERNAL)
-		std::cout << "Starting " << ((executionType == EXECUTION_EXTERNAL) ? "extern" : "internal") << " tracing on module " << fModule << "\n";
+		globalLog.Log("Starting %s tracing on module %s\n",
+				((executionType == EXECUTION_EXTERNAL) ? "extern" : "internal"),
+				fModule);
 
 	if (executionType == EXECUTION_INPROCESS) {
 		LIB_T hModule = GET_LIB_HANDLER2(fModule.c_str());
 		if (nullptr == hModule) {
-			std::cout << "Payload not found" << std::endl;
+			std::cerr << "Payload not found" << std::endl;
 			return 0;
 		}
 
@@ -167,7 +179,7 @@ int SimpleTracer::Run( ez::ezOptionParser &opt) {
 		PayloadHandler = (PayloadHandlerFunc)LOAD_PROC(hModule, "Payload");
 
 		if ((nullptr == payloadBuff) || (nullptr == PayloadHandler)) {
-			std::cout << "Payload imports not found" << std::endl;
+			std::cerr << "Payload imports not found" << std::endl;
 			return 0;
 		}
 	}
@@ -180,7 +192,8 @@ int SimpleTracer::Run( ez::ezOptionParser &opt) {
 
 	std::string fName;
 	opt.get("-o")->getString(fName);
-	std::cout << "Writing " << (observer.binOut ? "binary" : "text") << " output to " << fName << std::endl;
+	globalLog.Log("Writing %s output to %s\n",
+			(observer.binOut ? "binary" : "text"), fName);
 
 	FileLog *flog = new FileLog();
 	flog->SetLogFileName(fName.c_str());
@@ -201,8 +214,6 @@ int SimpleTracer::Run( ez::ezOptionParser &opt) {
 	} else if (executionType == EXECUTION_EXTERNAL) {
 		wchar_t ws[4096];
 		std::mbstowcs(ws, fModule.c_str(), fModule.size() + 1);
-		std::cout << "Converted module name [" << fModule << "] to wstring [";
-		std::wcout << std::wstring(ws) << "]\n";
 		ctrl->SetPath(std::wstring(ws));
 	}
 
@@ -214,14 +225,14 @@ int SimpleTracer::Run( ez::ezOptionParser &opt) {
 		batched = true;
 		FILE *f = freopen(NULL, "rb", stdin);
 		if (f == nullptr) {
-			std::cout << "Stdin reopen failed" << std::endl;
+			std::cerr << "Stdin reopen failed" << std::endl;
 		}
 
 		while (!feof(stdin)) {
 			CorpusItemHeader header;
 			if ((1 == fread(&header, sizeof(header), 1, stdin)) &&
 					(header.size == fread(payloadBuff, 1, header.size, stdin))) {
-				std::cout << "Using " << header.fName << " as input file." << std::endl;
+				globalLog.Log("Using %s as input file.\n", header.fName);
 
 				observer.fileName = header.fName;
 
@@ -237,20 +248,20 @@ int SimpleTracer::Run( ez::ezOptionParser &opt) {
 		// Expecting the size of each task first then the stream of tasks
 
 		fread(&payloadInputSizePerTask, sizeof(unsigned int), 1, stdin);
-		printf ("size of payload %u \n", payloadInputSizePerTask);
+		globalLog.Log ("size of payload %u \n", payloadInputSizePerTask);
 
 		// flowMode may be modified in ExecutionEnd
 		while (!feof(stdin) && flowMode) {
 			FlowOpCode nextOp = E_NEXTOP_TASK;
 			fread(&nextOp, sizeof(char), 1, stdin);
-			printf("NNext op code %d\n" , nextOp);
+			globalLog.Log("NNext op code %d\n" , nextOp);
 
 			if (nextOp == 0) {
-				printf("Stopping\n");
+				globalLog.Log("Stopping\n");
 				break;
 			}
 			else if (nextOp == 1){
-				printf("### Executing a new task\n");
+				globalLog.Log("### Executing a new task\n");
 
 				ReadFromFile(stdin, payloadInputSizePerTask);
 
@@ -259,10 +270,10 @@ int SimpleTracer::Run( ez::ezOptionParser &opt) {
 				ctrl->Execute();
 				ctrl->WaitForTermination();
 
-				printf("###Finished executing the task\n");
+				globalLog.Log("###Finished executing the task\n");
 			}
 			else{
-				printf("invalid next op value !! probably the data stream is corrupted\n");
+				globalLog.Log("invalid next op value !! probably the data stream is corrupted\n");
 				break;
 			}
 		}
@@ -279,7 +290,7 @@ int SimpleTracer::Run( ez::ezOptionParser &opt) {
 }
 
 SimpleTracer::SimpleTracer() :
-  observer(this) {}
+  observer(this), globalLog() {}
 
 SimpleTracer::~SimpleTracer() {}
 

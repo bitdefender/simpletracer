@@ -48,6 +48,26 @@ int main(int argc, const char *argv[]) {
 			0,
 			0,
 			0,
+			"Disable logs",
+			"--disableLogs"
+		   );
+
+	opt.add(
+			"",
+			0,
+			0,
+			0,
+			"write Log On File",
+			"--writeLogOnFile"
+		   );
+
+
+
+	opt.add(
+			"",
+			0,
+			0,
+			0,
 			"Use extern execution.",
 			"--extern"
 		   );
@@ -83,13 +103,13 @@ int main(int argc, const char *argv[]) {
 		   );
 
 	opt.add(
-		"",
-		false,
-		0,
-		0,
-		"When using binlog, buffer everything before writing the result",
-		"--binbuffered"
-	);
+			"",
+			false,
+			0,
+			0,
+			"When using binlog, buffer everything before writing the result",
+			"--binbuffered"
+		   );
 
 	opt.add(
 			"",
@@ -101,13 +121,13 @@ int main(int argc, const char *argv[]) {
 		   );
 
 	opt.add(
-		"",
-		false,
-		0,
-		0,
-		"Use this to create a flow of input payload- trace output. Input is fed from a different process",
-		"--flow"
-	);
+			"",
+			false,
+			0,
+			0,
+			"Use this to create a flow of input payload- trace output. Input is fed from a different process",
+			"--flow"
+		   );
 
 	opt.add(
 			"",
@@ -141,14 +161,14 @@ int main(int argc, const char *argv[]) {
 	opt.parse(argc, argv);
 
 	if (opt.isSet("--inprocess") && opt.isSet("--extern")) {
-		std::cout << "Conflicting options --inprocess and --extern" << std::endl;
+		std::cerr << "Conflicting options --inprocess and --extern" << std::endl;
 		return 0;
 	}
 
 	if (opt.isSet("-h")) {
 		std::string usage;
 		opt.getUsage(usage);
-		std::cout << usage;
+		std::cerr << usage;
 		return 0;
 	}
 
