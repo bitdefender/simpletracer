@@ -83,6 +83,15 @@ int main(int argc, const char *argv[]) {
 		   );
 
 	opt.add(
+		"",
+		false,
+		0,
+		0,
+		"When using binlog, buffer everything before writing the result",
+		"--binbuffered"
+	);
+
+	opt.add(
 			"",
 			false,
 			0,
@@ -90,6 +99,15 @@ int main(int argc, const char *argv[]) {
 			"Use a corpus file instead of individual inputs.",
 			"--batch"
 		   );
+
+	opt.add(
+		"",
+		false,
+		0,
+		0,
+		"Use this to create a flow of input payload- trace output. Input is fed from a different process",
+		"--flow"
+	);
 
 	opt.add(
 			"",

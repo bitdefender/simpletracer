@@ -75,6 +75,28 @@ unsigned int CustomObserver::ExecutionEnd(void *ctx) {
 		}
 
 		return EXECUTION_TERMINATE;
+	} else if (st->flowMode) {
+		printf("On flow mode restart\n");
+
+		FlowOpCode nextOp = E_NEXTOP_TASK;
+		fread(&nextOp, sizeof(char), 1, stdin);
+		printf("NNext op code %d\n" , nextOp);
+
+		if (nextOp == 0) {
+			printf("Stopping\n");
+			st->flowMode = false;
+			return EXECUTION_TERMINATE;
+		} else if (nextOp == 1){
+			printf("### Executing a new task\n");
+			st->ReadFromFile(stdin, st->payloadInputSizePerTask);
+			printf("###Finished executing the task\n");
+			aFormat->OnExecutionBegin(nullptr);
+			return EXECUTION_RESTART;
+		}
+
+		printf("invalid next op value !! probably the data stream is corrupted\n");
+		return EXECUTION_TERMINATE;
+
 	} else {
 		return EXECUTION_TERMINATE;
 	}
@@ -92,11 +114,32 @@ unsigned int CustomObserver::TranslationError(void *ctx, void *address) {
 }
 
 CustomObserver::CustomObserver(SimpleTracer *st) {
-  this->st = st;
+	this->st = st;
 }
 
 CustomObserver::~CustomObserver() {}
 
+// Read a payload buffer from a file and execute
+void SimpleTracer::ReadFromFile(FILE* inputFile, int sizeToRead) {
+	const bool readUntilEOF = sizeToRead == -1;
+	char *buff = payloadBuff;
+	unsigned int bSize = MAX_BUFF;
+	do {
+		if (readUntilEOF)
+		{
+			fgets(buff, bSize, inputFile);
+
+			while (*buff) {
+				buff++;
+				bSize--;
+			}
+		}
+		else
+		{
+			fread(buff, sizeof(char), sizeToRead, inputFile);
+		}
+	} while (!feof(inputFile) && readUntilEOF);
+}
 
 int SimpleTracer::Run( ez::ezOptionParser &opt) {
 	uint32_t executionType = EXECUTION_INPROCESS;
@@ -133,6 +176,8 @@ int SimpleTracer::Run( ez::ezOptionParser &opt) {
 		observer.binOut = true;
 	}
 
+	const bool isBinBuffered  = opt.isSet("--binbuffered");
+
 	std::string fName;
 	opt.get("-o")->getString(fName);
 	std::cout << "Writing " << (observer.binOut ? "binary" : "text") << " output to " << fName << std::endl;
@@ -142,7 +187,7 @@ int SimpleTracer::Run( ez::ezOptionParser &opt) {
 	observer.aLog = flog;
 
 	if (observer.binOut) {
-		observer.aFormat = new BinFormat(observer.aLog);
+		observer.aFormat = new BinFormat(observer.aLog, isBinBuffered);
 	} else {
 		observer.aFormat = new TextFormat(observer.aLog);
 	}
@@ -185,23 +230,44 @@ int SimpleTracer::Run( ez::ezOptionParser &opt) {
 			}
 		}
 
+	} else if (opt.isSet("--flow")) {
+		flowMode = true;
+		freopen(NULL, "rb", stdin);
+		// Input protocol [payload input Size  |  [task_op | payload - if taskOp == E_NEXT_OP_TASK]+ ]
+		// Expecting the size of each task first then the stream of tasks
+
+		fread(&payloadInputSizePerTask, sizeof(unsigned int), 1, stdin);
+		printf ("size of payload %u \n", payloadInputSizePerTask);
+
+		// flowMode may be modified in ExecutionEnd
+		while (!feof(stdin) && flowMode) {
+			FlowOpCode nextOp = E_NEXTOP_TASK;
+			fread(&nextOp, sizeof(char), 1, stdin);
+			printf("NNext op code %d\n" , nextOp);
+
+			if (nextOp == 0) {
+				printf("Stopping\n");
+				break;
+			}
+			else if (nextOp == 1){
+				printf("### Executing a new task\n");
+
+				ReadFromFile(stdin, payloadInputSizePerTask);
+
+				observer.fileName = "stdin";
+
+				ctrl->Execute();
+				ctrl->WaitForTermination();
+
+				printf("###Finished executing the task\n");
+			}
+			else{
+				printf("invalid next op value !! probably the data stream is corrupted\n");
+				break;
+			}
+		}
 	} else {
-		char *buff = payloadBuff;
-		unsigned int bSize = MAX_BUFF;
-		do {
-			char *res = fgets(buff, bSize, stdin);
-			if (res == nullptr) {
-				std::cout << "payloadBuffer read failed" << std::endl;
-			}
-
-			while (*buff) {
-				buff++;
-				bSize--;
-			}
-		} while (!feof(stdin));
-
-		observer.fileName = "stdin";
-
+		ReadFromFile(stdin);
 		ctrl->Execute();
 		ctrl->WaitForTermination();
 	}

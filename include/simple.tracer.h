@@ -25,10 +25,21 @@ struct CorpusItemHeader {
 	unsigned int size;
 };
 
+enum FlowOpCode
+{
+	E_NEXTOP_CLOSE,
+	E_NEXTOP_TASK
+};
+
+
+
 class SimpleTracer {
 	public:
 		ExecutionController *ctrl = NULL;
 		bool batched = false;
+		bool flowMode = false;
+
+		unsigned int payloadInputSizePerTask = 0;
 
 		typedef int(*PayloadHandlerFunc)();
 		char *payloadBuff = nullptr;
@@ -36,6 +47,7 @@ class SimpleTracer {
 
 		CustomObserver observer;
 
+		void ReadFromFile(FILE* inputFile, int sizeToRead=-1);
 		int Run(ez::ezOptionParser &opt);
 
 		SimpleTracer();
