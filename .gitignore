@@ -34,11 +34,11 @@
 *.out
 *.app
 
-# SDK
-river.sdk
+# Gdb peda
+.gdb_history
+peda-session-*.txt
 
-# Build directory
+# Sdk and build
 build-river-tools
-
-# Corpus directory
 corpus-*
+river.sdk

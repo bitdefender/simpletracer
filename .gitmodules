@@ -1,0 +1,3 @@
+[submodule "river.format"]
+	path = river.format
+	url = https://github.com/teodor-stoenescu/river.format

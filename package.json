@@ -1,0 +1,21 @@
+{
+  "author": {
+    "name": "Teodor Stoenescu",
+    "email": "tstoenescu@bitdefender.com"
+  },
+  "dependencies": {
+    "nan": "^2.4.0",
+    "node-gyp": "^3.4.0"
+  },
+  "description": "All tracers implemented for river engine",
+  "devDependencies": {},
+  "gypfile": true,
+  "license": "ISC",
+  "name": "libtracer",
+  "optionalDependencies": {},
+  "readme": "ERROR: No README data found!",
+  "scripts": {
+    "install": "node-gyp rebuild"
+  },
+  "version": "0.0.1"
+}
