@@ -207,7 +207,7 @@ int AnnotatedTracer::Run(ez::ezOptionParser &opt) {
 
 	std::string fModule;
 	opt.get("-p")->getString(fModule);
-	std::cout << "Using payload " << fModule << std::endl;
+	std::cout << "Using payload " << fModule.c_str() << std::endl;
 	if (executionType == EXECUTION_EXTERNAL)
 		std::cout << "Starting " << ((executionType == EXECUTION_EXTERNAL) ? "extern" : "internal") << " tracing on module " << fModule << "\n";
 
@@ -234,7 +234,7 @@ int AnnotatedTracer::Run(ez::ezOptionParser &opt) {
 
 	std::string fName;
 	opt.get("-o")->getString(fName);
-	std::cout << "Writing " << (observer.binOut ? "binary" : "text") << " output to " << fName << std::endl;
+	std::cout << "Writing " << (observer.binOut ? "binary" : "text") << " output to " << fName.c_str() << std::endl;
 
 	FileLog *flog = new FileLog();
 	flog->SetLogFileName(fName.c_str());

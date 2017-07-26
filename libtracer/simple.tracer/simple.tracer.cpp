@@ -162,7 +162,7 @@ int SimpleTracer::Run( ez::ezOptionParser &opt) {
 
 	std::string fModule;
 	opt.get("-p")->getString(fModule);
-	globalLog.Log("Using payload %s\n", fModule);
+	globalLog.Log("Using payload %s\n", fModule.c_str());
 	if (executionType == EXECUTION_EXTERNAL)
 		globalLog.Log("Starting %s tracing on module %s\n",
 				((executionType == EXECUTION_EXTERNAL) ? "extern" : "internal"),
@@ -193,7 +193,7 @@ int SimpleTracer::Run( ez::ezOptionParser &opt) {
 	std::string fName;
 	opt.get("-o")->getString(fName);
 	globalLog.Log("Writing %s output to %s\n",
-			(observer.binOut ? "binary" : "text"), fName);
+			(observer.binOut ? "binary" : "text"), fName.c_str());
 
 	FileLog *flog = new FileLog();
 	flog->SetLogFileName(fName.c_str());
