@@ -118,7 +118,9 @@ unsigned int CustomObserver::ExecutionControl(void *ctx, void *address) {
 			offset,
 			bbInfo.cost,
 			bbInfo.branchType,
-			bbInfo.branchInstruction
+			bbInfo.branchInstruction,
+			bbInfo.branchNext[0].address,
+			bbInfo.branchNext[1].address
 			);
 	return EXECUTION_ADVANCE;
 }
