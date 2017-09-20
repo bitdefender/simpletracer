@@ -57,7 +57,9 @@ unsigned int CustomObserver::ExecutionControl(void *ctx, void *address) {
 			offset,
 			bbInfo.cost,
 			bbInfo.branchType,
-			bbInfo.branchInstruction
+			bbInfo.branchInstruction,
+			bbInfo.branchNext[0].address,
+			bbInfo.branchNext[1].address
 			);
 
 	return EXECUTION_ADVANCE;
@@ -163,6 +165,7 @@ int SimpleTracer::Run( ez::ezOptionParser &opt) {
 	std::string fModule;
 	opt.get("-p")->getString(fModule);
 	globalLog.Log("Using payload %s\n", fModule.c_str());
+
 	if (executionType == EXECUTION_EXTERNAL)
 		globalLog.Log("Starting %s tracing on module %s\n",
 				((executionType == EXECUTION_EXTERNAL) ? "extern" : "internal"),
@@ -212,10 +215,12 @@ int SimpleTracer::Run( ez::ezOptionParser &opt) {
 	if (executionType == EXECUTION_INPROCESS) {
 		ctrl->SetEntryPoint((void*)PayloadHandler);
 	} else if (executionType == EXECUTION_EXTERNAL) {
-		wchar_t ws[4096];
-		std::mbstowcs(ws, fModule.c_str(), fModule.size() + 1);
-		ctrl->SetPath(std::wstring(ws));
+		//pass
 	}
+
+	wchar_t ws[4096];
+	std::mbstowcs(ws, fModule.c_str(), fModule.size() + 1);
+	ctrl->SetPath(std::wstring(ws));
 
 	ctrl->SetExecutionFeatures(0);
 
