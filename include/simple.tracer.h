@@ -16,6 +16,8 @@ class CustomObserver : public BasicObserver{
 		virtual unsigned int ExecutionControl(void *ctx, void *address);
 		virtual unsigned int ExecutionEnd(void *ctx);
 		virtual unsigned int TranslationError(void *ctx, void *address);
+		void TranslateAddressToBasicBlockPointer(
+				struct BasicBlockPointer *bbp, unsigned int address);
 
 		CustomObserver(SimpleTracer *st);
 		~CustomObserver();
