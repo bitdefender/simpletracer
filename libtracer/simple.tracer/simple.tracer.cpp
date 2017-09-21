@@ -35,31 +35,58 @@ unsigned int CustomObserver::ExecutionBegin(void *ctx, void *address) {
 	return EXECUTION_ADVANCE;
 }
 
-unsigned int CustomObserver::ExecutionControl(void *ctx, void *address) {
-	rev::BasicBlockInfo bbInfo;
-	st->ctrl->GetLastBasicBlockInfo(ctx, &bbInfo);
-
-	const char unkmod[MAX_PATH] = "???";
-	unsigned int offset = (DWORD)bbInfo.address;
+void CustomObserver::TranslateAddressToBasicBlockPointer(struct BasicBlockPointer* bbp,
+		unsigned int address) {
 	int foundModule = -1;
+	unsigned int offset = address;
+	const char unkmod[MAX_PATH] = "???";
+
+	memset(bbp, 0, sizeof(struct BasicBlockPointer));
+	if (address == 0) {
+		bbp->offset = 0;
+		strncpy(bbp->modName, unkmod, MAX_PATH);
+		return;
+	}
 
 	for (int i = 0; i < mCount; ++i) {
-		if ((mInfo[i].ModuleBase <= (DWORD)bbInfo.address) && ((DWORD)bbInfo.address < mInfo[i].ModuleBase + mInfo[i].Size)) {
+		if ((mInfo[i].ModuleBase <= address) &&
+				(address < mInfo[i].ModuleBase + mInfo[i].Size)) {
 			offset -= mInfo[i].ModuleBase;
 			foundModule = i;
 			break;
 		}
 	}
 
+	bbp->offset = offset;
+	if (foundModule == -1) {
+		strncpy(bbp->modName, unkmod, MAX_PATH);
+	} else {
+		strncpy(bbp->modName, mInfo[foundModule].Name, MAX_PATH);
+	}
+}
+
+unsigned int CustomObserver::ExecutionControl(void *ctx, void *address) {
+	rev::BasicBlockInfo bbInfo;
+	st->ctrl->GetLastBasicBlockInfo(ctx, &bbInfo);
+
+	unsigned int nextSize = 2;
+	struct BasicBlockPointer bbp;
+	struct BasicBlockPointer bbpNext[nextSize];
+
+	TranslateAddressToBasicBlockPointer(&bbp, (DWORD)bbInfo.address);
+
+	for (int i = 0; i < nextSize; ++i) {
+		TranslateAddressToBasicBlockPointer(bbpNext + i,
+				(DWORD)bbInfo.branchNext[i].address);
+	}
 
 	aFormat->WriteBasicBlock(
-			(-1 == foundModule) ? unkmod : mInfo[foundModule].Name,
-			offset,
+			bbp,
 			bbInfo.cost,
 			bbInfo.branchType,
 			bbInfo.branchInstruction,
-			bbInfo.branchNext[0].address,
-			bbInfo.branchNext[1].address
+			nextSize,
+			bbpNext
 			);
 
 	return EXECUTION_ADVANCE;
