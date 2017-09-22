@@ -113,7 +113,7 @@ unsigned int CustomObserver::ExecutionControl(void *ctx, void *address) {
 
 	TranslateAddressToBasicBlockPointer(&bbp, (DWORD)bbInfo.address);
 
-	for (int i = 0; i < nextSize; ++i) {
+	for (unsigned int i = 0; i < nextSize; ++i) {
 		TranslateAddressToBasicBlockPointer(bbpNext + i,
 				(DWORD)bbInfo.branchNext[i].address);
 	}
