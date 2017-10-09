@@ -1,7 +1,7 @@
 # Simple Tracer HOW TO
 
 ## 0. prerequisites
-Set your github user token. You can get one from https://github.com/settings/tokens (when logged in)
+Set your github user token. You can get one from [1] (when logged in)
 
 ```
 $ export GITHUB_API_TOKEN=<your_github_api_token>
@@ -12,6 +12,7 @@ Alternately you can append the following line to your ~/.bashrc file
 ```
 GITHUB_API_TOKEN=<your_github_api_token>
 ```
+[1] https://github.com/settings/tokens
 
 ## 1. get sources
 
