@@ -16,33 +16,25 @@ GITHUB_API_TOKEN=<your_github_api_token>
 ## 1. get sources
 
 ```
-$ mkdir symexec
-$ cd symexec
+$ mkdir <work-dir>
+$ cd <work-dir>
 $ git clone https://github.com/teodor-stoenescu/simpletracer.git
 ```
 ## 2. environment setup
 
 You need to set up the environment every time there's a new river release. This also builds the river tools.
 ```
-$ ./scripts/clean_build.sh master <latest_release (currently 0.1.0)>
+$ ./scripts/clean_build.sh <branch-name> <release-number>
 ```
+**\<release-number\>** is the release version needed for simpletracer build  
+**\<branch-name\>** is simpletracer branch that corresponds with release-number
 
-## 3. build
-
+## 3. run
 ```
-$ cd build-river-tools
-$ cmake --build .
-$ cd -
+$ cd ./build-river-tools
+$ export LD_LIBRARY_PATH=`pwd`/../river.sdk/lin/lib:`pwd`/lib
+$ ./bin/river.tracer --payload <target-library> < <input_test_case>
 ```
-
-## 4. run
-```
-$ cd ./build/bin
-$ export LD_LIBRARY_PATH=`pwd`/../../river.sdk/lin/lib
-$ ./simple_tracer --payload libhttp-parser.so < <input_test_case>
-```
-
-**--payload** specifies the shared object that you want to trace. This must export the payload that is the tested sw entry point.
+**--payload \<target-library\>** specifies the shared object that you want to trace. This must export the payload that is the tested sw entry point.
 
 **\<input_test_case\>** is corpus file that represents a test case.
-
