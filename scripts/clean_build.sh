@@ -20,13 +20,15 @@ echo "Rebuilding the solution ..."
 (cd $BUILD_DIR && cmake $SRC_DIR -DCMAKE_INSTALL_PREFIX=$BUILD_DIR -DRIVER_SDK_VERSION="$2" && cmake --build .)
 
 echo "Setting symlinks for core libraries ..."
+if [ ! -d $BUILD_DIR/lib ]; then
+  mkdir $BUILD_DIR/lib
+fi
 
 LIBC_PATH=$(find /lib -name libc.so.6 -path *i386*)
 if [ "$LIBC_PATH" == "" ]; then
   echo "libc.so.6 not found. Exiting."
   exit 1
 fi
-
 ln -s -T $LIBC_PATH $BUILD_DIR/lib/libc.so
 
 LIBPTHREAD_PATH=$(find /lib -name libpthread.so.0 -path *i386*)
@@ -34,5 +36,4 @@ if [ "$LIBPTHREAD_PATH" == "" ]; then
   echo "libpthread.so.0 not found. Exiting."
   exit 1
 fi
-
 ln -s -T $LIBPTHREAD_PATH $BUILD_DIR/lib/libpthread.so
