@@ -42,6 +42,7 @@ void *TrackingExecutor::ExtractBits(void *expr, DWORD lsb, DWORD size) {
 	printf("Extract ");
 	bmp->Print();
 	printf(" %ld %ld => ", 4 - (lsb >> 3) - (size >> 3), size >> 3);
+	fflush(stdout);
 
 	BitMap *ret = new BitMap(*bmp, 4 - (lsb >> 3) - (size >> 3), size >> 3);
 	ret->Print();

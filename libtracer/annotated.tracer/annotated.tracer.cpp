@@ -54,9 +54,8 @@ unsigned int CustomObserver::ExecutionBegin(void *ctx, void *address) {
 	}
 
 	if (!ctxInit) {
-		revEnv = NewX86RevtracerEnvironment(ctx, at->ctrl); //new RevSymbolicEnvironment(ctx, at->ctrl);
-		regEnv = NewX86RegistersEnvironment(revEnv); //new OverlappedRegistersEnvironment();
-		//TODO: is this legit?
+		revEnv = NewX86RevtracerEnvironment(ctx, at->ctrl);
+		regEnv = NewX86RegistersEnvironment(revEnv);
 		executor = new TrackingExecutor(regEnv, at->varCount);
 		regEnv->SetExecutor(executor);
 		regEnv->SetReferenceCounting(AddReference, DelReference);
@@ -67,7 +66,7 @@ unsigned int CustomObserver::ExecutionBegin(void *ctx, void *address) {
 			sprintf(vname, "s[%d]", i);
 
 			revEnv->SetSymbolicVariable(vname,
-					(rev::ADDR_TYPE)(&at->payloadBuff[i]), 1);
+					(rev::ADDR_TYPE)(at->payloadBuff + i), 1);
 		}
 
 		ctxInit = true;
@@ -197,7 +196,9 @@ unsigned int AnnotatedTracer::ComputeVarCount() {
 	do {
 		char *res = fgets(buff, bSize, stdin);
 		if (res == nullptr) {
-			std::cout << "payloadBuffer read failed" << std::endl;
+			std::cout << "WARN: Read in payloadBuff: " << MAX_BUFF - bSize <<
+				" out of: " << MAX_BUFF << std::endl;
+			break;
 		}
 
 		while (*buff) {
