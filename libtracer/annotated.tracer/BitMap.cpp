@@ -6,6 +6,7 @@
 inline void BitMap::Init(unsigned int size, unsigned int rows) {
 	sz = size;
 	rw = rows;
+	// how many bytes needed to represent sz bits
 	ct = (sz + 0x1f) >> 5;
 	data.resize(ct * rw, 0);
 
@@ -116,9 +117,6 @@ BitMap::BitMap(const BitMap &o, unsigned int c) {
 }
 
 BitMap::BitMap(const BitMap &o, unsigned int s, unsigned int c) {
-	if (o.sz > 4) {
-		DEBUG_BREAK;
-	}
 	Init(o.sz, c);
 
 	if (o.rw != 1) {
