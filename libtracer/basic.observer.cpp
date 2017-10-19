@@ -83,7 +83,8 @@ int BasicObserver::HandlePatchLibrary() {
 }
 
 BasicObserver::BasicObserver()
-	: binOut(false), aLog(nullptr), aFormat(nullptr)
+	: binOut(false), aLog(nullptr), aFormat(nullptr),
+  mInfo(nullptr), mCount(0), ctxInit(false)
 { }
 
 BasicObserver::~BasicObserver() {
