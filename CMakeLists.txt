@@ -5,18 +5,9 @@ project (SIMPLE_TRACER)
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_INSTALL_PREFIX}/bin)
 
-# download libs
-IF (EXISTS ${CMAKE_INSTALL_PREFIX}/lib)
-	MESSAGE (STATUS "libs present. For update please $ rm -r ${CMAKE_INSTALL_PREFIX}/lib")
-ELSE ()
-	execute_process (COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/scripts/libs.sh teodor-stoenescu simpletracer ${RIVER_SDK_VERSION} river.sdk.zip ${CMAKE_BINARY_DIR}/river.sdk.zip)
-	execute_process (COMMAND unzip ${CMAKE_BINARY_DIR}/river.sdk.zip -d ${CMAKE_CURRENT_SOURCE_DIR}/river.sdk)
-	execute_process (COMMAND rm ${CMAKE_BINARY_DIR}/river.sdk.zip)
-ENDIF ()
-
 # check dependencies
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/river.sdk/include)
+include_directories($ENV{RIVER_SDK_DIR}/include)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/river.format/include)
 
 # build targets

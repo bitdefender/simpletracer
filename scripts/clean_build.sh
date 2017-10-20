@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-[ $# -ne 2 ] && { echo "Usage: $0 <branch-name> <release-version>" >&2; exit 1; }
+[ $# -ne 1 ] && { echo "Usage: $0 <branch-name>" >&2; exit 1; }
 CWD=`pwd`
 SD="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
 SRC_DIR=$CWD
@@ -17,7 +17,7 @@ rm -rf $BUILD_DIR
 mkdir $BUILD_DIR
 
 echo "Rebuilding the solution ..."
-(cd $BUILD_DIR && cmake $SRC_DIR -DCMAKE_INSTALL_PREFIX=$BUILD_DIR -DRIVER_SDK_VERSION="$2" && cmake --build .)
+(cd $BUILD_DIR && cmake $SRC_DIR -DCMAKE_INSTALL_PREFIX=$BUILD_DIR  && cmake --build .)
 
 echo "Setting symlinks for core libraries ..."
 if [ ! -d $BUILD_DIR/lib ]; then

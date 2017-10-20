@@ -13,7 +13,7 @@
 			"include_dirs": [
 				"./include",
         "./river.format/include",
-        "./river.sdk/include/"
+        "<!(echo $RIVER_SDK_DIR)/include/"
 			],
       "conditions": [
 				["OS==\"linux\"", {
