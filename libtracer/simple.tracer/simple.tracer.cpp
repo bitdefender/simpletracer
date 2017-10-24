@@ -6,6 +6,7 @@
 #include "FileLog.h"
 
 #include "simple.tracer.h"
+#include "CommonCrossPlatform/Common.h" //MAX_PAYLOAD_BUF; MAX_PATH
 
 #ifdef _WIN32
 #include <Windows.h>
@@ -14,8 +15,6 @@
 #define GET_LIB_HANDLER2(libname) dlopen((libname), RTLD_LAZY)
 #endif
 
-
-#define MAX_BUFF 4096
 
 namespace st {
 
@@ -152,7 +151,7 @@ CustomObserver::~CustomObserver() {}
 void SimpleTracer::ReadFromFile(FILE* inputFile, int sizeToRead) {
 	const bool readUntilEOF = sizeToRead == -1;
 	char *buff = payloadBuff;
-	unsigned int bSize = MAX_BUFF;
+	unsigned int bSize = MAX_PAYLOAD_BUF;
 	do {
 		if (readUntilEOF)
 		{
@@ -245,7 +244,7 @@ int SimpleTracer::Run( ez::ezOptionParser &opt) {
 		//pass
 	}
 
-	wchar_t ws[4096];
+	wchar_t ws[MAX_PATH];
 	std::mbstowcs(ws, fModule.c_str(), fModule.size() + 1);
 	ctrl->SetPath(std::wstring(ws));
 

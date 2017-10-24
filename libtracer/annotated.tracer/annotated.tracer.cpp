@@ -8,6 +8,8 @@
 #include "TrackingExecutor.h"
 #include "annotated.tracer.h"
 
+#include "CommonCrossPlatform/Common.h" //MAX_PAYLOAD_BUF; MAX_PATH
+
 #ifdef _WIN32
 #include <Windows.h>
 #define GET_LIB_HANDLER2(libname) LoadLibraryA((libname))
@@ -15,8 +17,6 @@
 #define GET_LIB_HANDLER2(libname) dlopen((libname), RTLD_LAZY)
 
 #endif
-#define MAX_BUFF 4096
-
 
 // setup static values for BitMap and TrackingExecutor
 
@@ -192,12 +192,13 @@ unsigned int AnnotatedTracer::ComputeVarCount() {
 		return 1;
 
 	char *buff = payloadBuff;
-	unsigned int bSize = MAX_BUFF;
+	unsigned int bSize = MAX_PAYLOAD_BUF;
 	do {
 		char *res = fgets(buff, bSize, stdin);
 		if (res == nullptr) {
-			std::cout << "WARN: Read in payloadBuff: " << MAX_BUFF - bSize <<
-				" out of: " << MAX_BUFF << std::endl;
+			std::cout << "WARN: Read in payloadBuff: " <<
+				MAX_PAYLOAD_BUF - bSize <<
+				" out of: " << MAX_PAYLOAD_BUF << std::endl;
 			break;
 		}
 
@@ -279,7 +280,7 @@ int AnnotatedTracer::Run(ez::ezOptionParser &opt) {
 	if (executionType == EXECUTION_INPROCESS) {
 		ctrl->SetEntryPoint((void*)PayloadHandler);
 	} else if (executionType == EXECUTION_EXTERNAL) {
-		wchar_t ws[4096];
+		wchar_t ws[MAX_PATH];
 		std::mbstowcs(ws, fModule.c_str(), fModule.size() + 1);
 		std::cout << "Converted module name [" << fModule << "] to wstring [";
 		std::wcout << std::wstring(ws) << "]\n";
