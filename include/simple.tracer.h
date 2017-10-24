@@ -45,7 +45,7 @@ class SimpleTracer {
 		unsigned int payloadInputSizePerTask = 0;
 
 		typedef int(*PayloadHandlerFunc)();
-		char *payloadBuff = nullptr;
+		unsigned char *payloadBuff = nullptr;
 		PayloadHandlerFunc PayloadHandler = nullptr;
 
 		CustomObserver observer;
