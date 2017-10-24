@@ -149,24 +149,13 @@ CustomObserver::~CustomObserver() {}
 
 // Read a payload buffer from a file and execute
 void SimpleTracer::ReadFromFile(FILE* inputFile, int sizeToRead) {
-	const bool readUntilEOF = sizeToRead == -1;
-	char *buff = payloadBuff;
-	unsigned int bSize = MAX_PAYLOAD_BUF;
-	do {
-		if (readUntilEOF)
-		{
-			fgets(buff, bSize, inputFile);
+	unsigned int bSize = sizeToRead == -1 ? MAX_PAYLOAD_BUF : sizeToRead;
+	unsigned int localread, read = 0;
 
-			while (*buff) {
-				buff++;
-				bSize--;
-			}
-		}
-		else
-		{
-			fread(buff, sizeof(char), sizeToRead, inputFile);
-		}
-	} while (!feof(inputFile) && readUntilEOF);
+	while ((localread = fread(payloadBuff + read, sizeof(unsigned char), bSize - read,
+					inputFile)) != 0) {
+		read += localread;
+	}
 }
 
 int SimpleTracer::Run( ez::ezOptionParser &opt) {
@@ -204,7 +193,7 @@ int SimpleTracer::Run( ez::ezOptionParser &opt) {
 			return 0;
 		}
 
-		payloadBuff = (char *)LOAD_PROC(hModule, "payloadBuffer");
+		payloadBuff = (unsigned char *)LOAD_PROC(hModule, "payloadBuffer");
 		PayloadHandler = (PayloadHandlerFunc)LOAD_PROC(hModule, "Payload");
 
 		if ((nullptr == payloadBuff) || (nullptr == PayloadHandler)) {
@@ -252,13 +241,15 @@ int SimpleTracer::Run( ez::ezOptionParser &opt) {
 
 	ctrl->SetExecutionObserver(&observer);
 
+	// reopen as binary file
+	// considering input as unsigned char stream
+	FILE *f = freopen(NULL, "rb", stdin);
+	if (f == nullptr) {
+		std::cerr << "Stdin reopen failed" << std::endl;
+	}
+
 	if (opt.isSet("--batch")) {
 		batched = true;
-		FILE *f = freopen(NULL, "rb", stdin);
-		if (f == nullptr) {
-			std::cerr << "Stdin reopen failed" << std::endl;
-		}
-
 		while (!feof(stdin)) {
 			CorpusItemHeader header;
 			if ((1 == fread(&header, sizeof(header), 1, stdin)) &&
@@ -274,7 +265,6 @@ int SimpleTracer::Run( ez::ezOptionParser &opt) {
 
 	} else if (opt.isSet("--flow")) {
 		flowMode = true;
-		freopen(NULL, "rb", stdin);
 		// Input protocol [payload input Size  |  [task_op | payload - if taskOp == E_NEXT_OP_TASK]+ ]
 		// Expecting the size of each task first then the stream of tasks
 
