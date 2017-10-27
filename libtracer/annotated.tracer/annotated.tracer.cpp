@@ -136,14 +136,11 @@ unsigned int CustomObserver::ExecutionControl(void *ctx, void *address) {
 	}
 	executor->condCount = 0;
 
-	aFormat->WriteBasicBlock(
-			bbp,
-			bbInfo.cost,
-			bbInfo.branchType,
-			bbInfo.branchInstruction,
-			nextSize,
-			bbpNext
-			);
+	struct BasicBlockMeta bbm { bbp, bbInfo.cost, bbInfo.branchType,
+			bbInfo.branchInstruction, bbInfo.nInstructions, nextSize,
+			bbpNext };
+	aFormat->WriteBasicBlock(bbm);
+
 	return EXECUTION_ADVANCE;
 }
 

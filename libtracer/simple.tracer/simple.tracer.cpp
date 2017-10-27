@@ -79,14 +79,10 @@ unsigned int CustomObserver::ExecutionControl(void *ctx, void *address) {
 				(DWORD)bbInfo.branchNext[i].address);
 	}
 
-	aFormat->WriteBasicBlock(
-			bbp,
-			bbInfo.cost,
-			bbInfo.branchType,
-			bbInfo.branchInstruction,
-			nextSize,
-			bbpNext
-			);
+	struct BasicBlockMeta bbm { bbp, bbInfo.cost, bbInfo.branchType,
+			bbInfo.branchInstruction, bbInfo.nInstructions, nextSize,
+			bbpNext };
+	aFormat->WriteBasicBlock(bbm);
 
 	return EXECUTION_ADVANCE;
 }
