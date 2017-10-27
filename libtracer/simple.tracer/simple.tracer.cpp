@@ -103,8 +103,12 @@ unsigned int CustomObserver::ExecutionEnd(void *ctx) {
 		st->globalLog.Log("On flow mode restart\n");
 
 		FlowOpCode nextOp = E_NEXTOP_TASK;
-		fread(&nextOp, sizeof(char), 1, stdin);
-		st->globalLog.Log("NNext op code %d\n" , nextOp);
+		size_t res = fread(&nextOp, sizeof(char), 1, stdin);
+		if (res != 1) {
+			st->globalLog.Log("WARN: Cannot read next opcode\n");
+		} else {
+			st->globalLog.Log("NNext op code %d\n" , nextOp);
+		}
 
 		if (nextOp == 0) {
 			st->globalLog.Log("Stopping\n");
@@ -264,14 +268,22 @@ int SimpleTracer::Run( ez::ezOptionParser &opt) {
 		// Input protocol [payload input Size  |  [task_op | payload - if taskOp == E_NEXT_OP_TASK]+ ]
 		// Expecting the size of each task first then the stream of tasks
 
-		fread(&payloadInputSizePerTask, sizeof(unsigned int), 1, stdin);
-		globalLog.Log ("size of payload %u \n", payloadInputSizePerTask);
+		size_t res = fread(&payloadInputSizePerTask, sizeof(unsigned int), 1, stdin);
+		if (res != 1) {
+			globalLog.Log("WARN: Could not read payload input size\n");
+		} else {
+			globalLog.Log ("size of payload %u \n", payloadInputSizePerTask);
+		}
 
 		// flowMode may be modified in ExecutionEnd
 		while (!feof(stdin) && flowMode) {
 			FlowOpCode nextOp = E_NEXTOP_TASK;
-			fread(&nextOp, sizeof(char), 1, stdin);
-			globalLog.Log("NNext op code %d\n" , nextOp);
+			res = fread(&nextOp, sizeof(char), 1, stdin);
+			if (res != 1) {
+				globalLog.Log("WARN: Could not read next opcode\n");
+			} else {
+				globalLog.Log("NNext op code %d\n" , nextOp);
+			}
 
 			if (nextOp == 0) {
 				globalLog.Log("Stopping\n");
