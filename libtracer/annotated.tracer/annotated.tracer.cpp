@@ -36,11 +36,9 @@ const unsigned int TrackingExecutor::flagValues[] = {
 typedef void __stdcall SH(void *, void *, void *);
 
 void AddReference(void *ref) {
-	((BitMap *)ref)->AddRef();
 }
 
 void DelReference(void *ref) {
-	((BitMap *)ref)->DelRef();
 }
 
 namespace at {
@@ -117,24 +115,24 @@ unsigned int CustomObserver::ExecutionControl(void *ctx, void *address) {
 				(DWORD)bbInfo.branchNext[i].address);
 	}
 
-	if (executor->condCount) {
-		for (unsigned int i = 0; i < at->varCount; ++i) {
-			bool bPrint = true;
-			for (unsigned int j = 0; j < executor->condCount; ++j) {
-				bPrint &= ((BitMap *)executor->lastCondition[j])->GetBit(i);
-			}
+	//if (executor->condCount) {
+	//	for (unsigned int i = 0; i < at->varCount; ++i) {
+	//		bool bPrint = true;
+	//		for (unsigned int j = 0; j < executor->condCount; ++j) {
+	//			bPrint &= ((BitMap *)executor->lastCondition[j])->GetBit(i);
+	//		}
 
-			if (bPrint) {
-				aFormat->WriteInputUsage(i);
-			}
-		}
-	}
+	//		if (bPrint) {
+	//			aFormat->WriteInputUsage(i);
+	//		}
+	//	}
+	//}
 
-	for (unsigned int i = 0; i < executor->condCount; ++i) {
-		executor->lastCondition[i]->DelRef();
-		executor->lastCondition[i] = nullptr;
-	}
-	executor->condCount = 0;
+	//for (unsigned int i = 0; i < executor->condCount; ++i) {
+	//	executor->lastCondition[i]->DelRef();
+	//	executor->lastCondition[i] = nullptr;
+	//}
+	//executor->condCount = 0;
 
 	struct BasicBlockMeta bbm { bbp, bbInfo.cost, bbInfo.branchType,
 			bbInfo.branchInstruction, bbInfo.nInstructions, nextSize,
