@@ -1,15 +1,13 @@
 #ifndef __TRACKING_EXECUTOR__
 #define __TRACKING_EXECUTOR__
 
-#include "BitMap.h"
 #include "SymbolicEnvironment/Environment.h"
+#include "TaintedIndex.h"
 
 class TrackingExecutor : public sym::SymbolicExecutor {
 public :
-	BitMap *lastCondition[3];
-	unsigned int condCount;
-	BitMap *bitMapZero;
 	unsigned int varCount;
+	TaintedIndex *ti;
 
 	TrackingExecutor(sym::SymbolicEnvironment *e, unsigned int varCount);
 
@@ -26,15 +24,13 @@ public :
 
 	struct Operands {
 		bool useOp[4];
-		BitMap *operands[4];
+		DWORD operands[4];
 		bool useFlag[7];
-		BitMap *flags[7];
+		DWORD flags[7];
 	};
 
 	void ExecuteJCC(unsigned int flag, RiverInstruction *instruction, const Operands &ops);
 	void ExecuteJMPOp(unsigned int op, const Operands &ops);
-
-	void ResetCond();
 
 	virtual void Execute(RiverInstruction *instruction);
 };

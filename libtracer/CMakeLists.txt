@@ -7,7 +7,7 @@ add_library(libtracer STATIC
   basic.observer.cpp
   simple.tracer/simple.tracer.cpp
   annotated.tracer/TrackingExecutor.cpp
-  annotated.tracer/BitMap.cpp
+  annotated.tracer/TaintedIndex.cpp
   annotated.tracer/annotated.tracer.cpp)
 
 install (TARGETS libtracer DESTINATION ${CMAKE_INSTALL_PREFIX}/lib)
