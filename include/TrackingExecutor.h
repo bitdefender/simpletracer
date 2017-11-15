@@ -29,10 +29,10 @@ public :
 		DWORD flags[7];
 	};
 
-	void ExecuteJCC(unsigned int flag, RiverInstruction *instruction, const Operands &ops);
-	void ExecuteJMPOp(unsigned int op, const Operands &ops);
-
 	virtual void Execute(RiverInstruction *instruction);
+private:
+	void SetOperands(RiverInstruction *instruction, DWORD index);
+	void UnsetOperands(RiverInstruction *instruction);
 };
 
 
