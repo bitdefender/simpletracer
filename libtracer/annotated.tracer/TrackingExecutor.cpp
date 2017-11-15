@@ -3,7 +3,7 @@
 #include "TrackingExecutor.h"
 #include "TaintedIndex.h"
 #include "annotated.tracer.h"
-
+#include "revtracer/river.h"
 #include <stdlib.h>
 #include <stdio.h>
 
@@ -49,31 +49,55 @@ void *TrackingExecutor::ConcatBits(void *expr1, void *expr2) {
 	return (void *)res;
 }
 
-void TrackingExecutor::ExecuteJCC(unsigned int flag, RiverInstruction *instruction, const Operands &ops) {
-}
-
-void TrackingExecutor::ExecuteJMPOp(unsigned int op, const Operands &ops) {
-}
-
-void TrackingExecutor::Execute(RiverInstruction *instruction) {
-	static const unsigned char flagList[] = {
+static const unsigned char flagList[] = {
 		RIVER_SPEC_FLAG_CF,
 		RIVER_SPEC_FLAG_PF,
 		RIVER_SPEC_FLAG_AF,
 		RIVER_SPEC_FLAG_ZF,
 		RIVER_SPEC_FLAG_SF,
 		RIVER_SPEC_FLAG_OF
-	};
+};
 
-	static const int flagCount = sizeof(flagList) / sizeof(flagList[0]);
+static const char flagNames[6][3] = {
+	"CF", "PF", "AF", "ZF", "SF", "OF"
+};
 
-	//printf("[%08lx] %02x\n", instruction->instructionAddress, instruction->opCode);
+static const int flagCount = sizeof(flagList) / sizeof(flagList[0]);
+
+void TrackingExecutor::SetOperands(RiverInstruction *instruction, DWORD index) {
+	for (int i = 0; i < 4; ++i) {
+		if (RIVER_SPEC_MODIFIES_OP(i) & instruction->specifiers) {
+			env->SetOperand(i, (void *)index);
+		}
+	}
+
+	for (int i = 0; i < flagCount; ++i) {
+		if (flagList[i] & instruction->modFlags) {
+			env->SetFlgValue(flagList[i], (void *)index);
+		}
+	}
+}
+
+void TrackingExecutor::UnsetOperands(RiverInstruction *instruction) {
+	for (int i = 0; i < 4; ++i) {
+		if (RIVER_SPEC_MODIFIES_OP(i) & instruction->specifiers) {
+			env->UnsetOperand(i);
+		}
+	}
+
+	for (int i = 0; i < flagCount; ++i) {
+		if (flagList[i] & instruction->modFlags) {
+			env->UnsetFlgValue(flagList[i]);
+		}
+	}
+}
+
+void TrackingExecutor::Execute(RiverInstruction *instruction) {
+	printf("[%08lx] %02x\n", instruction->instructionAddress, instruction->opCode);
 
 	Operands ops;
 	memset(&ops, 0, sizeof(ops));
 	unsigned int trk = 0;
-	unsigned int usedOps = 0;
-	unsigned int usedFlags = 0;
 	DWORD lastOp = -1;
 
 	for (int i = 0; i < 4; ++i) {
@@ -84,7 +108,6 @@ void TrackingExecutor::Execute(RiverInstruction *instruction) {
 			if (isTracked) {
 				ops.operands[i] = (DWORD)opVal;
 				trk++;
-				usedOps += 1;
 				lastOp = ops.operands[i];
 			} else {
 				ops.operands[i] = -1;
@@ -100,7 +123,6 @@ void TrackingExecutor::Execute(RiverInstruction *instruction) {
 			if (isTracked) {
 				ops.flags[i] = (DWORD)opVal;
 				trk++;
-				usedFlags += 1;
 				lastOp = ops.flags[i];
 			} else {
 				ops.flags[i] = -1;
@@ -108,79 +130,48 @@ void TrackingExecutor::Execute(RiverInstruction *instruction) {
 		}
 	}
 
-	if (0 == (instruction->modifiers & RIVER_MODIFIER_EXT)) {
-		if ((0x70 <= instruction->opCode) && (instruction->opCode < 0x80)) {
-			ExecuteJCC(instruction->opCode - 0x70, instruction, ops);
-		}
-
-		/*if (0xFF == instruction->opCode) {
-		  if ((0x02 == instruction->subOpCode) || (0x04 == instruction->subOpCode)) {
-		  ExecuteJMPOp(0, ops);
-		  }
-		  }*/
-	} else {
-		if ((0x80 <= instruction->opCode) && (instruction->opCode < 0x90)) {
-			ExecuteJCC(instruction->opCode - 0x80, instruction, ops);
+	// clear registers means losing the reference to the
+	// tacked memory location. We unset it
+	if (0x30 <= instruction->opCode && instruction->opCode <= 0x33) {
+		if (ops.operands[0] == ops.operands[1]) {
+			UnsetOperands(instruction);
+			return;
 		}
 	}
 
 	if (trk == 0) {
-		for (int i = 0; i < 4; ++i) {
-			if (RIVER_SPEC_MODIFIES_OP(i) & instruction->specifiers) {
-				env->UnsetOperand(i);
-			}
-		}
-
-		for (int i = 0; i < flagCount; ++i) {
-			if (flagList[i] & instruction->modFlags) {
-				env->UnsetFlgValue(flagList[i]);
-			}
-		}
+		UnsetOperands(instruction);
 		return;
 	}
 
-	DWORD optIndex = 0, flagIndex = 0;
+	DWORD index = 0;
 	if (trk) {
 		if (1 == trk) {
-			optIndex = flagIndex = lastOp;
+			index = lastOp;
 		} else {
-			if (usedOps) {
-				fprintf(stderr, "operands: I[%lu] <= ", ti->GetIndex());
+				fprintf(stderr, "I[%lu] <= ", ti->GetIndex());
 				for (int i = 0; i < 4; ++i) {
 					if (ops.useOp[i] && ops.operands[i] != -1) {
 						fprintf(stderr, "I[%lu] | ", ops.operands[i]);
 					}
 				}
-				fprintf(stderr, "\n");
-				optIndex = ti->GetIndex();
-				ti->NextIndex();
-			}
 
-			if (usedFlags) {
-				fprintf(stderr, "flags: I[%lu] <= ", ti->GetIndex());
 				for (int i = 0; i < flagCount; ++i) {
 					if (ops.useFlag[i] && ops.flags[i] != -1) {
-						fprintf(stderr, "I[%lu] | ", ops.flags[i]);
+						fprintf(stderr, "%s:I[%lu] | ", flagNames[i],
+								ops.flags[i]);
 					}
 				}
 				fprintf(stderr, "\n");
-				flagIndex = ti->GetIndex();
+				index = ti->GetIndex();
 				ti->NextIndex();
-			}
 		}
 
+		SetOperands(instruction, index);
 
-		for (int i = 0; i < 4; ++i) {
-			if (RIVER_SPEC_MODIFIES_OP(i) & instruction->specifiers) {
-				env->SetOperand(i, (void *)optIndex);
-			}
-		}
 
-		for (int i = 0; i < flagCount; ++i) {
-			if (flagList[i] & instruction->modFlags) {
-				env->SetFlgValue(flagList[i], (void *)flagIndex);
-			}
-		}
-
+	} else {
+		//unset operands if none are symbolic
+		UnsetOperands(instruction);
 	}
 }
