@@ -8,8 +8,8 @@
 #include <stdio.h>
 
 TrackingExecutor::TrackingExecutor(sym::SymbolicEnvironment *e,
-		unsigned int varCount)
-	: SymbolicExecutor(e), varCount(varCount) {
+		unsigned int varCount, AbstractFormat *aFormat)
+	: SymbolicExecutor(e), varCount(varCount), aFormat(aFormat) {
 	ti = new TaintedIndex();
 }
 
@@ -93,7 +93,7 @@ void TrackingExecutor::UnsetOperands(RiverInstruction *instruction) {
 }
 
 void TrackingExecutor::Execute(RiverInstruction *instruction) {
-	printf("[%08lx] %02x\n", instruction->instructionAddress, instruction->opCode);
+	//printf("[%08lx] %02x\n", instruction->instructionAddress, instruction->opCode);
 
 	Operands ops;
 	memset(&ops, 0, sizeof(ops));
