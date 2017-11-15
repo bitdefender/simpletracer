@@ -54,7 +54,7 @@ unsigned int CustomObserver::ExecutionBegin(void *ctx, void *address) {
 	if (!ctxInit) {
 		revEnv = NewX86RevtracerEnvironment(ctx, at->ctrl);
 		regEnv = NewX86RegistersEnvironment(revEnv);
-		executor = new TrackingExecutor(regEnv, at->varCount);
+		executor = new TrackingExecutor(regEnv, at->varCount, aFormat);
 		regEnv->SetExecutor(executor);
 		regEnv->SetReferenceCounting(AddReference, DelReference);
 
@@ -114,25 +114,6 @@ unsigned int CustomObserver::ExecutionControl(void *ctx, void *address) {
 		TranslateAddressToBasicBlockPointer(bbpNext + i,
 				(DWORD)bbInfo.branchNext[i].address);
 	}
-
-	//if (executor->condCount) {
-	//	for (unsigned int i = 0; i < at->varCount; ++i) {
-	//		bool bPrint = true;
-	//		for (unsigned int j = 0; j < executor->condCount; ++j) {
-	//			bPrint &= ((BitMap *)executor->lastCondition[j])->GetBit(i);
-	//		}
-
-	//		if (bPrint) {
-	//			aFormat->WriteInputUsage(i);
-	//		}
-	//	}
-	//}
-
-	//for (unsigned int i = 0; i < executor->condCount; ++i) {
-	//	executor->lastCondition[i]->DelRef();
-	//	executor->lastCondition[i] = nullptr;
-	//}
-	//executor->condCount = 0;
 
 	struct BasicBlockMeta bbm { bbp, bbInfo.cost, bbInfo.branchType,
 			bbInfo.branchInstruction, bbInfo.nInstructions, nextSize,
