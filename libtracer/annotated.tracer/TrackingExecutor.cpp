@@ -7,6 +7,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+#define MAX_DEPS 20
+
 TrackingExecutor::TrackingExecutor(sym::SymbolicEnvironment *e,
 		unsigned int varCount, AbstractFormat *aFormat)
 	: SymbolicExecutor(e), varCount(varCount), aFormat(aFormat) {
@@ -14,10 +16,11 @@ TrackingExecutor::TrackingExecutor(sym::SymbolicEnvironment *e,
 }
 
 void *TrackingExecutor::CreateVariable(const char *name, DWORD size) {
-	if (atoi(name + 2) < varCount) {
-		fprintf(stderr, "I[%lu] <= %s\n", ti->GetIndex(), name);
+	unsigned int source = atoi(name + 2);
+	if (source < varCount) {
+		aFormat->WriteTaintedIndexPayload(ti->GetIndex(), source);
 	} else {
-		printf("Error: Wrong index: I[%lu]\n", ti->GetIndex());
+		fprintf(stderr, "Error: Wrong index: I[%lu]\n", ti->GetIndex());
 	}
 	DWORD res = ti->GetIndex();
 	ti->NextIndex();
@@ -31,8 +34,7 @@ void *TrackingExecutor::MakeConst(DWORD value, DWORD bits) {
 void *TrackingExecutor::ExtractBits(void *expr, DWORD lsb, DWORD size) {
 	DWORD index = (DWORD)expr;
 
-	fprintf(stderr, "I[%lu] <= I[%lu][%lu:%lu]\n",
-			ti->GetIndex(), index, size, lsb);
+	aFormat->WriteTaintedIndexExtract(ti->GetIndex(), index, lsb, size);
 	DWORD res = ti->GetIndex();
 	ti->NextIndex();
 	return (void *)res;
@@ -41,9 +43,11 @@ void *TrackingExecutor::ExtractBits(void *expr, DWORD lsb, DWORD size) {
 void *TrackingExecutor::ConcatBits(void *expr1, void *expr2) {
 	DWORD index1 = (DWORD)expr1;
 	DWORD index2 = (DWORD)expr2;
+	unsigned int operands[] = {
+		index1, index2
+	};
 
-	fprintf(stderr, "I[%lu] <= I[%lu] ++ I[%lu]\n", ti->GetIndex(),
-			index1, index2);
+	aFormat->WriteTaintedIndexConcat(ti->GetIndex(), operands);
 	DWORD res = ti->GetIndex();
 	ti->NextIndex();
 	return (void *)res;
@@ -145,26 +149,35 @@ void TrackingExecutor::Execute(RiverInstruction *instruction) {
 	}
 
 	DWORD index = 0;
+	unsigned int depsSize = 0;
+	unsigned int deps[MAX_DEPS];
+	unsigned int dest = 0;
+	unsigned int flags = 0;
 	if (trk) {
 		if (1 == trk) {
 			index = lastOp;
 		} else {
-				fprintf(stderr, "I[%lu] <= ", ti->GetIndex());
-				for (int i = 0; i < 4; ++i) {
-					if (ops.useOp[i] && ops.operands[i] != -1) {
-						fprintf(stderr, "I[%lu] | ", ops.operands[i]);
-					}
-				}
+			dest = ti->GetIndex();
 
-				for (int i = 0; i < flagCount; ++i) {
-					if (ops.useFlag[i] && ops.flags[i] != -1) {
-						fprintf(stderr, "%s:I[%lu] | ", flagNames[i],
-								ops.flags[i]);
-					}
+			for (int i = 0; i < flagCount; ++i) {
+				if (ops.useFlag[i] && ops.flags[i] != -1) {
+					deps[depsSize] = ops.flags[i];
+					depsSize += 1;
+					flags |= (1 << i);
 				}
-				fprintf(stderr, "\n");
-				index = ti->GetIndex();
-				ti->NextIndex();
+			}
+
+			for (int i = 0; i < 4; ++i) {
+				if (ops.useOp[i] && ops.operands[i] != -1) {
+					deps[depsSize] = ops.operands[i];
+					depsSize += 1;
+				}
+			}
+
+			aFormat->WriteTaintedIndexExecute(dest, flags, depsSize,
+					deps);
+			index = ti->GetIndex();
+			ti->NextIndex();
 		}
 
 		SetOperands(instruction, index);
