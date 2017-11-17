@@ -174,15 +174,14 @@ void TrackingExecutor::Execute(RiverInstruction *instruction) {
 				}
 			}
 
-			aFormat->WriteTaintedIndexExecute(dest, flags, depsSize,
-					deps);
+			aFormat->WriteTaintedIndexExecute(dest,
+					instruction->instructionAddress, flags,
+					depsSize, deps);
 			index = ti->GetIndex();
 			ti->NextIndex();
 		}
 
 		SetOperands(instruction, index);
-
-
 	} else {
 		//unset operands if none are symbolic
 		UnsetOperands(instruction);
