@@ -3,6 +3,7 @@
 
 #include "SymbolicEnvironment/Environment.h"
 #include "TaintedIndex.h"
+#include "Execution/Execution.h"
 
 class TrackingExecutor : public sym::SymbolicExecutor {
 public :
@@ -14,6 +15,7 @@ public :
 			AbstractFormat *aFormat);
 
 	virtual void *CreateVariable(const char *name, DWORD size);
+	void SetModuleData(int mCount, ModuleInfo *mInfo);
 
 	virtual void *MakeConst(DWORD value, DWORD bits);
 
@@ -33,6 +35,9 @@ public :
 
 	virtual void Execute(RiverInstruction *instruction);
 private:
+	int mCount;
+	ModuleInfo *mInfo;
+
 	void SetOperands(RiverInstruction *instruction, DWORD index);
 	void UnsetOperands(RiverInstruction *instruction);
 };

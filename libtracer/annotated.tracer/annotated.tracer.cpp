@@ -10,6 +10,8 @@
 
 #include "CommonCrossPlatform/Common.h" //MAX_PAYLOAD_BUF; MAX_PATH
 
+#include "utils.h" //common handlers
+
 #ifdef _WIN32
 #include <Windows.h>
 #define GET_LIB_HANDLER2(libname) LoadLibraryA((libname))
@@ -55,6 +57,7 @@ unsigned int CustomObserver::ExecutionBegin(void *ctx, void *address) {
 		revEnv = NewX86RevtracerEnvironment(ctx, at->ctrl);
 		regEnv = NewX86RegistersEnvironment(revEnv);
 		executor = new TrackingExecutor(regEnv, at->varCount, aFormat);
+		executor->SetModuleData(mCount, mInfo);
 		regEnv->SetExecutor(executor);
 		regEnv->SetReferenceCounting(AddReference, DelReference);
 
@@ -75,31 +78,6 @@ unsigned int CustomObserver::ExecutionBegin(void *ctx, void *address) {
 	return EXECUTION_ADVANCE;
 }
 
-void CustomObserver::TranslateAddressToBasicBlockPointer(struct BasicBlockPointer* bbp,
-		unsigned int address) {
-	int foundModule = -1;
-	unsigned int offset = address;
-	const char unkmod[MAX_PATH] = "???";
-
-	memset(bbp, 0, sizeof(struct BasicBlockPointer));
-
-	for (int i = 0; i < mCount; ++i) {
-		if ((mInfo[i].ModuleBase <= address) &&
-				(address < mInfo[i].ModuleBase + mInfo[i].Size)) {
-			offset -= mInfo[i].ModuleBase;
-			foundModule = i;
-			break;
-		}
-	}
-
-	bbp->offset = offset;
-	if (foundModule == -1) {
-		strncpy(bbp->modName, unkmod, MAX_PATH);
-	} else {
-		strncpy(bbp->modName, mInfo[foundModule].Name, MAX_PATH);
-	}
-}
-
 unsigned int CustomObserver::ExecutionControl(void *ctx, void *address) {
 	rev::BasicBlockInfo bbInfo;
 	at->ctrl->GetLastBasicBlockInfo(ctx, &bbInfo);
@@ -108,11 +86,11 @@ unsigned int CustomObserver::ExecutionControl(void *ctx, void *address) {
 	struct BasicBlockPointer bbp;
 	struct BasicBlockPointer bbpNext[nextSize];
 
-	TranslateAddressToBasicBlockPointer(&bbp, (DWORD)bbInfo.address);
+	TranslateAddressToBasicBlockPointer(&bbp, (DWORD)bbInfo.address, mCount, mInfo);
 
 	for (unsigned int i = 0; i < nextSize; ++i) {
 		TranslateAddressToBasicBlockPointer(bbpNext + i,
-				(DWORD)bbInfo.branchNext[i].address);
+				(DWORD)bbInfo.branchNext[i].address, mCount, mInfo);
 	}
 
 	struct BasicBlockMeta bbm { bbp, bbInfo.cost, bbInfo.branchType,

@@ -7,6 +7,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+#include "utils.h"
+
 #define MAX_DEPS 20
 
 TrackingExecutor::TrackingExecutor(sym::SymbolicEnvironment *e,
@@ -25,6 +27,11 @@ void *TrackingExecutor::CreateVariable(const char *name, DWORD size) {
 	DWORD res = ti->GetIndex();
 	ti->NextIndex();
 	return (void *)res;
+}
+
+void TrackingExecutor::SetModuleData(int mCount, ModuleInfo *mInfo) {
+	this->mCount = mCount;
+	this->mInfo = mInfo;
 }
 
 void *TrackingExecutor::MakeConst(DWORD value, DWORD bits) {
@@ -174,8 +181,10 @@ void TrackingExecutor::Execute(RiverInstruction *instruction) {
 				}
 			}
 
-			aFormat->WriteTaintedIndexExecute(dest,
-					instruction->instructionAddress, flags,
+			BasicBlockPointer bbp;
+			TranslateAddressToBasicBlockPointer(&bbp,
+					instruction->instructionAddress, mCount, mInfo);
+			aFormat->WriteTaintedIndexExecute(dest, bbp, flags,
 					depsSize, deps);
 			index = ti->GetIndex();
 			ti->NextIndex();
