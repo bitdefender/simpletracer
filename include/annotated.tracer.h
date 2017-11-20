@@ -9,6 +9,9 @@
 
 #include "basic.observer.h"
 
+#define Z3_TRACKING 0x1
+#define TAINTED_INDEX_TRACKING 0x0
+
 namespace at {
 
 typedef int(*PayloadHandlerFunc)();
@@ -21,7 +24,7 @@ class CustomObserver : public BasicObserver {
 
 		sym::SymbolicEnvironment *regEnv;
 		sym::SymbolicEnvironment *revEnv;
-		TrackingExecutor *executor;
+		sym::SymbolicExecutor *executor;
 
 		virtual unsigned int ExecutionBegin(void *ctx, void *address);
 		virtual unsigned int ExecutionControl(void *ctx, void *address);
@@ -41,6 +44,7 @@ class AnnotatedTracer {
 	public:
 
 		bool batched;
+		uint8_t trackingMode;
 		unsigned int varCount;
 
 		ExecutionController *ctrl;
