@@ -107,6 +107,15 @@ int main(int argc, const char *argv[]) {
 			false,
 			0,
 			0,
+			"Use Z3 for symbolic execution expressions.",
+			"--z3"
+		   );
+
+	opt.add(
+			"",
+			false,
+			0,
+			0,
 			"When using binlog, buffer everything before writing the result",
 			"--binbuffered"
 		   );

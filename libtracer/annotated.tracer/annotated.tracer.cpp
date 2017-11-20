@@ -6,6 +6,7 @@
 // annotated tracer dependencies
 #include "SymbolicEnvironment/Environment.h"
 #include "TrackingExecutor.h"
+#include "Z3SymbolicExecutor.h"
 #include "annotated.tracer.h"
 
 #include "CommonCrossPlatform/Common.h" //MAX_PAYLOAD_BUF; MAX_PATH
@@ -56,8 +57,13 @@ unsigned int CustomObserver::ExecutionBegin(void *ctx, void *address) {
 	if (!ctxInit) {
 		revEnv = NewX86RevtracerEnvironment(ctx, at->ctrl);
 		regEnv = NewX86RegistersEnvironment(revEnv);
-		executor = new TrackingExecutor(regEnv, at->varCount, aFormat);
-		executor->SetModuleData(mCount, mInfo);
+
+		if (at->trackingMode == TAINTED_INDEX_TRACKING) {
+			executor = new TrackingExecutor(regEnv, at->varCount, aFormat);
+			executor->SetModuleData(mCount, mInfo);
+		} else {
+			executor = new Z3SymbolicExecutor(regEnv);
+		}
 		regEnv->SetExecutor(executor);
 		regEnv->SetReferenceCounting(AddReference, DelReference);
 
@@ -211,6 +217,12 @@ int AnnotatedTracer::Run(ez::ezOptionParser &opt) {
 
 	if (opt.isSet("--binlog")) {
 		observer.binOut = true;
+	}
+
+	if (opt.isSet("--z3")) {
+		trackingMode = Z3_TRACKING;
+	} else {
+		trackingMode = TAINTED_INDEX_TRACKING;
 	}
 
 	std::string fName;

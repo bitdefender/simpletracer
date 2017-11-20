@@ -13,5 +13,14 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR}/river.format/include)
 # build targets
 add_subdirectory (river.format/logger)
 add_subdirectory (river.format/format.handler)
+
+if (NOT DEFINED ENV{Z3_ROOT_PATH})
+  if (NOT DEFINED Z3_ROOT)
+    message(FATAL_ERROR "Specify Z3_ROOT variable")
+  endif()
+else()
+  set(Z3_ROOT $ENV{Z3_ROOT_PATH})
+endif()
+
 add_subdirectory (libtracer)
 add_subdirectory (river.tracer)
