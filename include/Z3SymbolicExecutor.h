@@ -85,7 +85,7 @@ public:
 
 	typedef void(Z3SymbolicExecutor::*SymbolicExecute)(RiverInstruction *instruction, SymbolicOperands *ops);
 	template <Z3SymbolicExecutor::SymbolicExecute fSubOps[8]> void SymbolicExecuteSubOp(RiverInstruction *instruction, SymbolicOperands *ops);
-	
+
 	static SymbolicExecute executeFuncs[2][0x100];
 	static SymbolicExecute executeIntegerFuncs[8];
 
