@@ -60,10 +60,10 @@ unsigned int CustomObserver::ExecutionBegin(void *ctx, void *address) {
 
 		if (at->trackingMode == TAINTED_INDEX_TRACKING) {
 			executor = new TrackingExecutor(regEnv, at->varCount, aFormat);
-			executor->SetModuleData(mCount, mInfo);
 		} else {
 			executor = new Z3SymbolicExecutor(regEnv);
 		}
+		executor->SetModuleData(mCount, mInfo);
 		regEnv->SetExecutor(executor);
 		regEnv->SetReferenceCounting(AddReference, DelReference);
 

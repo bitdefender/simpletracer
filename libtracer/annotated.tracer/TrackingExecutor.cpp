@@ -29,11 +29,6 @@ void *TrackingExecutor::CreateVariable(const char *name, DWORD size) {
 	return (void *)res;
 }
 
-void TrackingExecutor::SetModuleData(int mCount, ModuleInfo *mInfo) {
-	this->mCount = mCount;
-	this->mInfo = mInfo;
-}
-
 void *TrackingExecutor::MakeConst(DWORD value, DWORD bits) {
 	return nullptr;
 }
