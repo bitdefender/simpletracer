@@ -6,7 +6,7 @@
 // annotated tracer dependencies
 #include "SymbolicEnvironment/Environment.h"
 #include "TrackingExecutor.h"
-#include "Z3SymbolicExecutor.h"
+#include "Z3SymbolicExecutor/Z3SymbolicExecutor.h"
 #include "annotated.tracer.h"
 
 #include "CommonCrossPlatform/Common.h" //MAX_PAYLOAD_BUF; MAX_PATH

@@ -107,12 +107,12 @@ void TrackingExecutor::Execute(RiverInstruction *instruction) {
 	DWORD lastOp = -1;
 
 	for (int i = 0; i < 4; ++i) {
-		BOOL isTracked;
-		DWORD val;
-		void *opVal;
-		if (true == (ops.useOp[i] = env->GetOperand(i, isTracked, val, opVal))) {
-			if (isTracked) {
-				ops.operands[i] = (DWORD)opVal;
+		struct OperandInfo opInfo = {
+			.opIdx = (BYTE)i
+		};
+		if (true == (ops.useOp[i] = env->GetOperand(opInfo))) {
+			if (opInfo.isTracked) {
+				ops.operands[i] = (DWORD)opInfo.symbolic;
 				trk++;
 				lastOp = ops.operands[i];
 			} else {
