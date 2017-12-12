@@ -122,12 +122,12 @@ void TrackingExecutor::Execute(RiverInstruction *instruction) {
 	}
 
 	for (int i = 0; i < flagCount; ++i) {
-		BOOL isTracked;
-		BYTE val;
-		void *opVal;
-		if (true == (ops.useFlag[i] = env->GetFlgValue(flagList[i], isTracked, val, opVal))) {
-			if (isTracked) {
-				ops.flags[i] = (DWORD)opVal;
+		struct FlagInfo flagInfo = {
+			.opIdx = flagList[i]
+		};
+		if (true == (ops.useFlag[i] = env->GetFlgValue(flagInfo))) {
+			if (flagInfo.isTracked) {
+				ops.flags[i] = (DWORD)flagInfo.symbolic;
 				trk++;
 				lastOp = ops.flags[i];
 			} else {
