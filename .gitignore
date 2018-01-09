@@ -42,3 +42,5 @@ peda-session-*.txt
 build-river-tools
 corpus-*
 river.sdk
+trace.simple.out*
+execution.log*
