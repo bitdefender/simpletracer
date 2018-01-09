@@ -19,7 +19,7 @@ def find_text_in_file(text, filename):
 
 
 def generate_test():
-    len = random.randint(0, 1024)
+    len = random.randint(1, 1024)
     return ''.join(random.choice(string.ascii_uppercase + string.ascii_lowercase + string.digits) for _ in range(len))
 
 if __name__ == "__main__":
