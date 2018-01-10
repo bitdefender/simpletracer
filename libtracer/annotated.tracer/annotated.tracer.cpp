@@ -140,6 +140,7 @@ CustomObserver::CustomObserver(AnnotatedTracer *at) {
 
 	regEnv = nullptr;
 	revEnv = nullptr;
+	executor = nullptr;
 
 	this->at = at;
 }
