@@ -44,3 +44,4 @@ corpus-*
 river.sdk
 trace.simple.out*
 execution.log*
+input*
