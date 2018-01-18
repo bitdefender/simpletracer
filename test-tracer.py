@@ -4,7 +4,7 @@ import random
 import os
 
 process_path = './build-river-tools/bin/river.tracer'
-test_lib_path = '/home/alex/libhttp-parser.so'
+test_lib_path = '/home/alex/build/lib/libhttp-parser.so'
 max_tests = 1000
 max_len = 1024
 
@@ -20,7 +20,7 @@ def find_text_in_file(text, filename):
 
 def generate_test():
     len = random.randint(1, 1024)
-    return ''.join(random.choice(string.ascii_uppercase + string.ascii_lowercase + string.digits) for _ in range(len))
+    return ''.join(os.urandom(len))
 
 if __name__ == "__main__":
     current_test = 0
@@ -28,7 +28,10 @@ if __name__ == "__main__":
         tracer_process_args = [process_path, '--annotated', '--z3', '-p', test_lib_path, '-o', 'trace.simple.out.' + str(current_test)]
         io = process(tracer_process_args)
         payload = generate_test()
-        print("Send payload: [%s] of len: [%d]" % (payload, len(payload)))
+        print("Send payload [%d]: [%s] of len: [%d]" % (current_test, payload, len(payload)))
+        f = open("input." + str(current_test), 'wb')
+        f.write(payload)
+        f.close()
         io.send(payload)
         io.stdin.close()
         while True:
