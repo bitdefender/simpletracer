@@ -5,7 +5,7 @@ import os
 
 process_path = './build-river-tools/bin/river.tracer'
 test_lib_path = '/home/alex/build/lib/libhttp-parser.so'
-max_tests = 1000
+max_tests = 500
 max_len = 1024
 
 error_messages = ["Disassembling unknown instruction", "Translating unknown instruction"]
@@ -19,27 +19,28 @@ def find_text_in_file(text, filename):
 
 
 def generate_test():
-    len = random.randint(1, 1024)
-    return ''.join(os.urandom(len))
+    len = random.randint(1, max_len)
+    return ''.join(os.urandom(1) for i in range(len))
 
 if __name__ == "__main__":
     current_test = 0
     while current_test < max_tests:
         tracer_process_args = [process_path, '--annotated', '--z3', '-p', test_lib_path, '-o', 'trace.simple.out.' + str(current_test)]
-        io = process(tracer_process_args)
+
         payload = generate_test()
-        print("Send payload [%d]: [%s] of len: [%d]" % (current_test, payload, len(payload)))
+        print("Send payload [%d] of len: [%d]" % (current_test, len(payload)))
+
         f = open("input." + str(current_test), 'wb')
         f.write(payload)
         f.close()
-        io.send(payload)
-        io.stdin.close()
-        while True:
-            try:
-                io.recv()
-            except EOFError:
-                break
-        io.close()
+
+        tracer = process(tracer_process_args)
+        tracer.send(payload)
+
+        tracer.stdin.close()
+        tracer.recvall()
+
+        tracer.close()
         ## check if unk instruction was found in executin log
         for e in error_messages:
             if find_text_in_file(e, execution_log):

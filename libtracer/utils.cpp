@@ -1,5 +1,6 @@
 #include "utils.h"
-#include "string.h"
+#include "CommonCrossPlatform/Common.h"
+#include <string.h>
 
 void TranslateAddressToBasicBlockPointer(
 		struct BasicBlockPointer* bbp,
@@ -25,4 +26,15 @@ void TranslateAddressToBasicBlockPointer(
 	} else {
 		strncpy(bbp->modName, mInfo[foundModule].Name, MAX_PATH);
 	}
+}
+
+unsigned int ReadFromFile(FILE* inputFile, unsigned char *buf, int sizeToRead) {
+	unsigned int bSize = sizeToRead == -1 ? MAX_PAYLOAD_BUF : sizeToRead;
+	unsigned int localread, read = 0;
+
+	while ((localread = fread(buf + read, sizeof(unsigned char), bSize - read,
+					inputFile)) != 0) {
+		read += localread;
+	}
+	return read;
 }
