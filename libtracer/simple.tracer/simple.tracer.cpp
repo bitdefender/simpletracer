@@ -89,7 +89,7 @@ unsigned int CustomObserver::ExecutionEnd(void *ctx) {
 			return EXECUTION_TERMINATE;
 		} else if (nextOp == 1){
 			st->globalLog.Log("### Executing a new task\n");
-			st->ReadFromFile(stdin, st->payloadInputSizePerTask);
+			ReadFromFile(stdin, st->payloadBuff, st->payloadInputSizePerTask);
 			st->globalLog.Log("###Finished executing the task\n");
 			aFormat->OnExecutionBegin(nullptr);
 			return EXECUTION_RESTART;
@@ -119,17 +119,6 @@ CustomObserver::CustomObserver(SimpleTracer *st) {
 }
 
 CustomObserver::~CustomObserver() {}
-
-// Read a payload buffer from a file and execute
-void SimpleTracer::ReadFromFile(FILE* inputFile, int sizeToRead) {
-	unsigned int bSize = sizeToRead == -1 ? MAX_PAYLOAD_BUF : sizeToRead;
-	unsigned int localread, read = 0;
-
-	while ((localread = fread(payloadBuff + read, sizeof(unsigned char), bSize - read,
-					inputFile)) != 0) {
-		read += localread;
-	}
-}
 
 int SimpleTracer::Run( ez::ezOptionParser &opt) {
 	uint32_t executionType = EXECUTION_INPROCESS;
@@ -265,7 +254,7 @@ int SimpleTracer::Run( ez::ezOptionParser &opt) {
 			else if (nextOp == 1){
 				globalLog.Log("### Executing a new task\n");
 
-				ReadFromFile(stdin, payloadInputSizePerTask);
+				ReadFromFile(stdin, payloadBuff, payloadInputSizePerTask);
 
 				observer.fileName = "stdin";
 
@@ -280,7 +269,7 @@ int SimpleTracer::Run( ez::ezOptionParser &opt) {
 			}
 		}
 	} else {
-		ReadFromFile(stdin);
+		ReadFromFile(stdin, payloadBuff);
 		ctrl->Execute();
 		ctrl->WaitForTermination();
 	}

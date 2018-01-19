@@ -50,7 +50,6 @@ class SimpleTracer {
 
 		Logger globalLog;
 
-		void ReadFromFile(FILE* inputFile, int sizeToRead=-1);
 		int Run(ez::ezOptionParser &opt);
 
 		SimpleTracer();

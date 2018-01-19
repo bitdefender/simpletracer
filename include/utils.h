@@ -6,5 +6,6 @@
 
 void TranslateAddressToBasicBlockPointer(struct BasicBlockPointer *bbp,
 		unsigned int address, int mCount, ModuleInfo *mInfo);
+unsigned int ReadFromFile(FILE* inputFile, unsigned char *buf, int sizeToRead = -1);
 
 #endif

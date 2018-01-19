@@ -152,24 +152,7 @@ unsigned int AnnotatedTracer::ComputeVarCount() {
 	if (payloadBuff == nullptr)
 		return 1;
 
-	char *buff = payloadBuff;
-	unsigned int bSize = MAX_PAYLOAD_BUF;
-	do {
-		char *res = fgets(buff, bSize, stdin);
-		if (res == nullptr) {
-			std::cout << "WARN: Read in payloadBuff: " <<
-				MAX_PAYLOAD_BUF - bSize <<
-				" out of: " << MAX_PAYLOAD_BUF << std::endl;
-			break;
-		}
-
-		while (*buff) {
-			buff++;
-			bSize--;
-		}
-	} while (!feof(stdin));
-
-	return buff - payloadBuff - 1;
+	return ReadFromFile(stdin, payloadBuff, MAX_PAYLOAD_BUF);
 }
 
 void AnnotatedTracer::SetSymbolicHandler(rev::SymbolicHandlerFunc symb) {
@@ -206,7 +189,7 @@ int AnnotatedTracer::Run(ez::ezOptionParser &opt) {
 			return 0;
 		}
 
-		payloadBuff = (char *)LOAD_PROC(hModule, "payloadBuffer");
+		payloadBuff = (unsigned char *)LOAD_PROC(hModule, "payloadBuffer");
 		PayloadHandler = (PayloadHandlerFunc)LOAD_PROC(hModule, "Payload");
 
 		if ((nullptr == payloadBuff) || (nullptr == PayloadHandler)) {

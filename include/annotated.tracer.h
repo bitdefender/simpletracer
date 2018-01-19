@@ -49,7 +49,7 @@ class AnnotatedTracer {
 
 		ExecutionController *ctrl;
 
-		char *payloadBuff;
+		unsigned char *payloadBuff;
 		PayloadHandlerFunc PayloadHandler;
 
 		rev::SymbolicHandlerFunc symb;
