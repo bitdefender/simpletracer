@@ -45,3 +45,7 @@ river.sdk
 trace.simple.out*
 execution.log*
 input*
+in
+
+#output
+*.bin
