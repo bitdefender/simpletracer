@@ -6,7 +6,7 @@
 // annotated tracer dependencies
 #include "SymbolicEnvironment/Environment.h"
 #include "TrackingExecutor.h"
-#include "Z3SymbolicExecutor/Z3SymbolicExecutor.h"
+#include "Z3SymbolicExecutor.h"
 #include "annotated.tracer.h"
 
 #include "CommonCrossPlatform/Common.h" //MAX_PAYLOAD_BUF; MAX_PATH
@@ -61,7 +61,7 @@ unsigned int CustomObserver::ExecutionBegin(void *ctx, void *address) {
 		if (at->trackingMode == TAINTED_INDEX_TRACKING) {
 			executor = new TrackingExecutor(regEnv, at->varCount, aFormat);
 		} else {
-			executor = new Z3SymbolicExecutor(regEnv);
+			executor = new Z3SymbolicExecutor(regEnv, aFormat);
 		}
 		executor->SetModuleData(mCount, mInfo);
 		regEnv->SetExecutor(executor);
