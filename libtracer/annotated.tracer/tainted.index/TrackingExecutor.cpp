@@ -108,10 +108,11 @@ void TrackingExecutor::Execute(RiverInstruction *instruction) {
 
 	for (int i = 0; i < 4; ++i) {
 		struct OperandInfo opInfo = {
-			.opIdx = (BYTE)i
+			.opIdx = (BYTE)i,
+			.fields = 0
 		};
 		if (true == (ops.useOp[i] = env->GetOperand(opInfo))) {
-			if (opInfo.isTracked) {
+			if (opInfo.fields & OP_HAS_SYMBOLIC) {
 				ops.operands[i] = (DWORD)opInfo.symbolic;
 				trk++;
 				lastOp = ops.operands[i];
@@ -123,10 +124,11 @@ void TrackingExecutor::Execute(RiverInstruction *instruction) {
 
 	for (int i = 0; i < flagCount; ++i) {
 		struct FlagInfo flagInfo = {
-			.opIdx = flagList[i]
+			.opIdx = flagList[i],
+			.fields = 0
 		};
 		if (true == (ops.useFlag[i] = env->GetFlgValue(flagInfo))) {
-			if (flagInfo.isTracked) {
+			if (flagInfo.fields & OP_HAS_SYMBOLIC) {
 				ops.flags[i] = (DWORD)flagInfo.symbolic;
 				trk++;
 				lastOp = ops.flags[i];
