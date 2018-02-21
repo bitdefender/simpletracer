@@ -29,11 +29,13 @@ private:
 	struct SymbolicOperands {
 		nodep::DWORD av;
 		nodep::BOOL tr[4];
-		nodep::DWORD cv[4];
+		nodep::DWORD cvb[4];
+		nodep::DWORD cva[4];
 		void *sv[4];
 
 		nodep::BOOL trf[7];
-		nodep::BYTE cvf[7];
+		nodep::BYTE cvfb[7];
+		nodep::BYTE cvfa[7];
 		void *svf[7];
 	};
 

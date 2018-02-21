@@ -22,7 +22,7 @@ const unsigned char Z3SymbolicExecutor::flagList[] = {
 
 bool Z3SymbolicExecutor::CheckSameSort(unsigned size, Z3_ast *ops) {
 	unsigned sortSize = 0xffffffff;
-	for (int i = 0; i < size; ++i) {
+	for (unsigned int i = 0; i < size; ++i) {
 		unsigned tempSortSize = Z3_get_bv_sort_size(context,
 				Z3_get_sort(context, ops[i]));
 		if (sortSize == 0xffffffff) {
@@ -798,8 +798,8 @@ void Z3SymbolicExecutor::GetSymbolicValues(RiverInstruction *instruction, Symbol
 
 	for (int i = 0; i < 4; ++i) {
 		if ((OPERAND_BITMASK(i) & opsFlagsMask) && !ops->tr[i]) {
-			ops->sv[i] = Z3_mk_int(context, ops->cv[i], operandsSort);
-			PRINTF_SYM("mkint %lu size: %u\n", ops->cv[i],
+			ops->sv[i] = Z3_mk_int(context, ops->cvb[i], operandsSort);
+			PRINTF_SYM("mkint %lu size: %u\n", ops->cvb[i],
 					Z3_get_bv_sort_size(context, operandsSort));
 		}
 	}
@@ -809,42 +809,63 @@ void Z3SymbolicExecutor::GetSymbolicValues(RiverInstruction *instruction, Symbol
 			if (ops->trf[i]) {
 				ops->svf[i] = ((Z3SymbolicCpuFlag *)ops->svf[i])->GetValue();
 			} else {
-				ops->svf[i] = Z3_mk_int(context, ops->cvf[i], bitSort);
+				ops->svf[i] = Z3_mk_int(context, ops->cvfb[i], bitSort);
 			}
 		}
 	}
 }
 
 void printoperand(struct OperandInfo oinfo) {
-	fprintf(stderr, "<info> [%d] operand: istracked: %d concrete :0x%08lX symbolic: 0x%08lX\n",
-			oinfo.opIdx, oinfo.isTracked, oinfo.concrete, (DWORD)oinfo.symbolic);
+	printf("[%d] operand: fields: %s %s %s\n",
+		oinfo.opIdx,
+		oinfo.fields & OP_HAS_SYMBOLIC ? "SYMBOLIC" : "",
+		oinfo.fields & OP_HAS_CONCRETE_BEFORE ? "CONCRETE_BEFORE" : "",
+		oinfo.fields & OP_HAS_CONCRETE_AFTER ? "CONCRETE_AFTER" : ""
+	);
+
+	if (oinfo.fields & OP_HAS_SYMBOLIC) {
+		printf("\tsymbolic : 0x%08lX\n", (DWORD)oinfo.symbolic);
+	};
+
+	if (oinfo.fields & OP_HAS_CONCRETE_BEFORE) {
+		printf("\tconcreteBefore : 0x%08lX\n", oinfo.concreteBefore);
+	};
+
+	if (oinfo.fields & OP_HAS_CONCRETE_AFTER) {
+		printf("\tconcreteAfter : 0x%08lX\n", oinfo.concreteAfter);
+	};
 }
 
 void InitializeOperand(struct OperandInfo &oinfo) {
 	oinfo.opIdx = -1;
-	oinfo.isTracked = 0;
-	oinfo.concrete = 0;
+	oinfo.fields = 0;
+	oinfo.concreteBefore = 0;
+	oinfo.concreteAfter = 0;
 	oinfo.symbolic = nullptr;
 }
 
 void Z3SymbolicExecutor::ComposeScaleAndIndex(nodep::BYTE &scale,
 		struct OperandInfo &indexOp) {
+
+	indexOp.fields = OP_HAS_CONCRETE_BEFORE;
+	indexOp.concreteBefore = 0;
+
 	if (scale == 0) {
-		indexOp.isTracked = false;
-		indexOp.symbolic = (void *)zero32;
-		indexOp.concrete = 0;
+		indexOp.fields &= ~OP_HAS_SYMBOLIC;
+		indexOp.symbolic = nullptr; //(void *)zero32;
+		indexOp.concreteBefore = 0;
 	}
 
-	if (indexOp.isTracked) {
+	if (indexOp.fields & OP_HAS_SYMBOLIC) {
 		// index has to be resolved if needConcat or needExtract
 		Z3_sort opSort = Z3_get_sort(context, (Z3_ast)indexOp.symbolic);
 		Z3_ast res = Z3_mk_bvmul(context, (Z3_ast)indexOp.symbolic,
 				Z3_mk_int(context, scale, opSort));
-		PRINTF_SYM("add %p <= %d + %p\n",
+		printf("<sym> add %p <= %d + %p\n",
 				res, scale, indexOp.symbolic);
 		indexOp.symbolic = (void *)res;
 	} else {
-		indexOp.concrete = scale * indexOp.concrete;
+		indexOp.concreteBefore = scale * indexOp.concreteBefore;
 	}
 }
 
@@ -857,39 +878,49 @@ void Z3SymbolicExecutor::AddOperands(struct OperandInfo &left,
 	} else {
 		DEBUG_BREAK;
 	}
-	result.concrete = 0;
-	result.isTracked = left.isTracked || right.isTracked;
+	//result.concrete = 0;
+	
+	result.fields = left.fields & right.fields;
+	result.fields |= (left.fields & OP_HAS_SYMBOLIC) | (right.fields & OP_HAS_SYMBOLIC);
 
-	if (!result.isTracked) {
-		// concrete result
-		result.concrete = left.concrete + right.concrete;
-	} else {
-		// one operand or both are symbolic
-		// if one is concrete, turn into symbolic
-		if ((left.isTracked && right.isTracked) == 0) {
-			if (!left.isTracked) {
-				if (left.concrete == 0) {
-					result = right;
-					return;
-				}
-				left.symbolic = Z3_mk_int(context, left.concrete,
-						dwordSort);
-				PRINTF_SYM("mkint %p <= %08lX\n", left.symbolic, left.concrete);
-			} else if (!right.isTracked) {
-				if (right.concrete == 0) {
-					result = left;
-					return;
-				}
-				right.symbolic = Z3_mk_int(context, right.concrete,
-						dwordSort);
-				PRINTF_SYM("mkint %p <= %08lX\n", right.symbolic, right.concrete);
+	if (result.fields & OP_HAS_CONCRETE_BEFORE) {
+		result.concreteBefore = left.concreteBefore + right.concreteBefore;
+	}
+
+	if (result.fields & OP_HAS_CONCRETE_AFTER) {
+		result.concreteAfter = left.concreteAfter + right.concreteAfter;
+	}
+
+	if (result.fields & OP_HAS_SYMBOLIC) {
+		if (0 == (left.fields & OP_HAS_SYMBOLIC)) {
+			if (0 == left.concreteBefore) {
+				result = right;
+				return;
 			}
+
+			left.symbolic = Z3_mk_int(context, left.concreteBefore, dwordSort);
+			left.fields |= OP_HAS_SYMBOLIC;
+
+			printf("<sym> mkint %p <= %08lX\n", left.symbolic, left.concreteBefore);
 		}
+
+		if (0 == (right.fields & OP_HAS_SYMBOLIC)) {
+			if (0 == right.concreteBefore) {
+				result = left;
+				return;
+			}
+
+			right.symbolic = Z3_mk_int(context, right.concreteBefore, dwordSort);
+			right.fields |= OP_HAS_SYMBOLIC;
+
+			printf("<sym> mkint %p <= %08lX\n", right.symbolic, right.concreteBefore);
+		}
+
 		// add two symbolic objects
 		result.symbolic = Z3_mk_bvadd(context, (Z3_ast)left.symbolic,
-				(Z3_ast)right.symbolic);
-		PRINTF_SYM("add %p <= %p + %p\n", result.symbolic, left.symbolic,
-				right.symbolic);
+			(Z3_ast)right.symbolic);
+		printf("<sym> add %p <= %p + %p\n", result.symbolic, left.symbolic,
+			right.symbolic);
 	}
 }
 
@@ -903,16 +934,18 @@ void Z3SymbolicExecutor::Execute(RiverInstruction *instruction) {
 	for (int i = 0; i < 4; ++i) {
 		struct OperandInfo opInfo;
 		opInfo.opIdx = (nodep::BYTE)i;
-		opInfo.isTracked = false;
+		opInfo.fields = 0;
 
 		if (true == (uo[i] = env->GetOperand(opInfo))) {
 			ops.av |= OPERAND_BITMASK(i);
-			isSymb |= opInfo.isTracked;
+			isSymb |= (opInfo.fields & OP_HAS_SYMBOLIC) != 0;
 			if (isSymb)
 				printoperand(opInfo);
 		}
-		ops.tr[i] = opInfo.isTracked;
-		ops.cv[i] = opInfo.concrete;
+
+		ops.tr[i] = (0 != (opInfo.fields & OP_HAS_SYMBOLIC));
+		ops.cvb[i] = opInfo.concreteBefore;
+		ops.cva[i] = opInfo.concreteAfter;
 		ops.sv[i] = opInfo.symbolic;
 
 		struct OperandInfo baseOpInfo, indexOpInfo, composedIndeOpInfo;
@@ -937,7 +970,7 @@ void Z3SymbolicExecutor::Execute(RiverInstruction *instruction) {
 			ComposeScaleAndIndex(scale, composedIndeOpInfo);
 		}
 		AddOperands(baseOpInfo, composedIndeOpInfo, opAddressInfo);
-		if (opAddressInfo.isTracked) {
+		if (opAddressInfo.fields & OP_HAS_SYMBOLIC) {
 			PRINTF_SYM("address %p <= %d * %p + %p\n", opAddressInfo.symbolic,
 					scale, indexOpInfo.symbolic, baseOpInfo.symbolic);
 		}
@@ -946,14 +979,15 @@ void Z3SymbolicExecutor::Execute(RiverInstruction *instruction) {
 	for (int i = 0; i < flagCount; ++i) {
 		struct FlagInfo flagInfo;
 		flagInfo.opIdx = flagList[i];
-		flagInfo.isTracked = false;
+		flagInfo.fields = 0;
 
 		if (true == (uof[i] = env->GetFlgValue(flagInfo))) {
 			ops.av |= flagInfo.opIdx;
-			isSymb |= flagInfo.isTracked;
+			isSymb |= 0 != (flagInfo.fields & OP_HAS_SYMBOLIC);
 		}
-		ops.trf[i] = flagInfo.isTracked;
-		ops.cvf[i] = flagInfo.concrete;
+		ops.trf[i] = 0 != (flagInfo.fields & OP_HAS_SYMBOLIC);
+		ops.cvfb[i] = flagInfo.concreteBefore;
+		ops.cvfa[i] = flagInfo.concreteAfter;
 		ops.svf[i] = flagInfo.symbolic;
 	}
 
@@ -1157,24 +1191,6 @@ Z3SymbolicExecutor::SymbolicExecute Z3SymbolicExecutor::executeFuncs[2][0x100] =
 		/*0x8D*/ &Z3SymbolicExecutor::SymbolicJumpCC<Z3EQUALS(Z3FLAG(RIVER_SPEC_IDX_SF), Z3FLAG(RIVER_SPEC_IDX_OF))>,
 		/*0x8E*/ &Z3SymbolicExecutor::SymbolicJumpCC<Z3OR(Z3FLAG(RIVER_SPEC_IDX_ZF), Z3NOT(Z3EQUALS(Z3FLAG(RIVER_SPEC_IDX_SF), Z3FLAG(RIVER_SPEC_IDX_OF))))>,
 		/*0x8F*/ &Z3SymbolicExecutor::SymbolicJumpCC<Z3NOT(Z3OR(Z3FLAG(RIVER_SPEC_IDX_ZF), Z3NOT(Z3EQUALS(Z3FLAG(RIVER_SPEC_IDX_SF), Z3FLAG(RIVER_SPEC_IDX_OF)))))>,
-
-		/*&Z3SymbolicExecutor::SymbolicExecuteJCC<RIVER_SPEC_IDX_OF>,
-		&Z3SymbolicExecutor::SymbolicExecuteJCC<RIVER_SPEC_IDX_OF>,
-		&Z3SymbolicExecutor::SymbolicExecuteJCC<RIVER_SPEC_IDX_CF>,
-		&Z3SymbolicExecutor::SymbolicExecuteJCC<RIVER_SPEC_IDX_CF>,
-		&Z3SymbolicExecutor::SymbolicExecuteJCC<RIVER_SPEC_IDX_ZF>,
-		&Z3SymbolicExecutor::SymbolicExecuteJCC<RIVER_SPEC_IDX_ZF>,
-		&Z3SymbolicExecutor::SymbolicExecuteJBE<RIVER_SPEC_IDX_ZF, RIVER_SPEC_IDX_CF, true>,
-		&Z3SymbolicExecutor::SymbolicExecuteJBE<RIVER_SPEC_IDX_ZF, RIVER_SPEC_IDX_CF, true>,
-		&Z3SymbolicExecutor::SymbolicExecuteJCC<RIVER_SPEC_IDX_SF>,
-		&Z3SymbolicExecutor::SymbolicExecuteJCC<RIVER_SPEC_IDX_SF>,
-		&Z3SymbolicExecutor::SymbolicExecuteJCC<RIVER_SPEC_IDX_PF>,
-		&Z3SymbolicExecutor::SymbolicExecuteJCC<RIVER_SPEC_IDX_PF>,
-		&Z3SymbolicExecutor::SymbolicExecuteUnk,
-		&Z3SymbolicExecutor::SymbolicExecuteUnk,
-		&Z3SymbolicExecutor::SymbolicExecuteUnk,
-		&Z3SymbolicExecutor::SymbolicExecuteUnk,*/
-
 		/*0x90*/ &Z3SymbolicExecutor::SymbolicSetCC<Z3FLAG(RIVER_SPEC_IDX_OF)>,
 		/*0x91*/ &Z3SymbolicExecutor::SymbolicSetCC<Z3NOT(Z3FLAG(RIVER_SPEC_IDX_OF))>,
 		/*0x92*/ &Z3SymbolicExecutor::SymbolicSetCC<Z3FLAG(RIVER_SPEC_IDX_CF)>,
@@ -1191,24 +1207,6 @@ Z3SymbolicExecutor::SymbolicExecute Z3SymbolicExecutor::executeFuncs[2][0x100] =
 		/*0x9D*/ &Z3SymbolicExecutor::SymbolicSetCC<Z3EQUALS(Z3FLAG(RIVER_SPEC_IDX_SF), Z3FLAG(RIVER_SPEC_IDX_OF))>,
 		/*0x9E*/ &Z3SymbolicExecutor::SymbolicSetCC<Z3OR(Z3FLAG(RIVER_SPEC_IDX_ZF), Z3NOT(Z3EQUALS(Z3FLAG(RIVER_SPEC_IDX_SF), Z3FLAG(RIVER_SPEC_IDX_OF))))>,
 		/*0x9F*/ &Z3SymbolicExecutor::SymbolicSetCC<Z3NOT(Z3OR(Z3FLAG(RIVER_SPEC_IDX_ZF), Z3NOT(Z3EQUALS(Z3FLAG(RIVER_SPEC_IDX_SF), Z3FLAG(RIVER_SPEC_IDX_OF)))))>,
-
-		/*&Z3SymbolicExecutor::SymbolicExecuteUnk, 
-		&Z3SymbolicExecutor::SymbolicExecuteUnk, 
-		&Z3SymbolicExecutor::SymbolicExecuteUnk, 
-		&Z3SymbolicExecutor::SymbolicExecuteUnk,
-		&Z3SymbolicExecutor::SymbolicExecuteSetCC<RIVER_SPEC_IDX_ZF>, 
-		&Z3SymbolicExecutor::SymbolicExecuteUnk, 
-		&Z3SymbolicExecutor::SymbolicExecuteSetBE<RIVER_SPEC_IDX_ZF, RIVER_SPEC_IDX_CF, true>, 
-		&Z3SymbolicExecutor::SymbolicExecuteSetBE<RIVER_SPEC_IDX_ZF, RIVER_SPEC_IDX_CF, false>,
-		&Z3SymbolicExecutor::SymbolicExecuteUnk, 
-		&Z3SymbolicExecutor::SymbolicExecuteUnk, 
-		&Z3SymbolicExecutor::SymbolicExecuteUnk, 
-		&Z3SymbolicExecutor::SymbolicExecuteUnk,
-		&Z3SymbolicExecutor::SymbolicExecuteUnk, 
-		&Z3SymbolicExecutor::SymbolicExecuteUnk, 
-		&Z3SymbolicExecutor::SymbolicExecuteUnk, 
-		&Z3SymbolicExecutor::SymbolicExecuteUnk,*/
-
 		/*0xA0*/ &Z3SymbolicExecutor::SymbolicExecuteUnk, &Z3SymbolicExecutor::SymbolicExecuteUnk, &Z3SymbolicExecutor::SymbolicExecuteUnk, &Z3SymbolicExecutor::SymbolicExecuteUnk,
 		/*0xA4*/ &Z3SymbolicExecutor::SymbolicExecuteUnk, &Z3SymbolicExecutor::SymbolicExecuteUnk, &Z3SymbolicExecutor::SymbolicExecuteUnk, &Z3SymbolicExecutor::SymbolicExecuteUnk,
 		/*0xA8*/ &Z3SymbolicExecutor::SymbolicExecuteUnk, &Z3SymbolicExecutor::SymbolicExecuteUnk, &Z3SymbolicExecutor::SymbolicExecuteUnk, &Z3SymbolicExecutor::SymbolicExecuteUnk,
