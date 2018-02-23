@@ -39,8 +39,9 @@ private:
 		void *svf[7];
 	};
 
-	static const unsigned char flagList[6];
+	static const unsigned char flagList[7];
 	static const int flagCount = sizeof(flagList) / sizeof(flagList[0]);
+	static const int opCount = 4;
 
 	//void EvalZF(Z3_ast result);
 
