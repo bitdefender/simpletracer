@@ -3,7 +3,7 @@
 #include "CommonCrossPlatform/Common.h"
 #include <assert.h>
 
-//#define PRINT_DEBUG_SYMBOLIC
+#define PRINT_DEBUG_SYMBOLIC
 
 #ifndef PRINT_DEBUG_SYMBOLIC
 #define PRINTF_SYM
@@ -17,7 +17,8 @@ const unsigned char Z3SymbolicExecutor::flagList[] = {
 	RIVER_SPEC_FLAG_AF,
 	RIVER_SPEC_FLAG_ZF,
 	RIVER_SPEC_FLAG_SF,
-	RIVER_SPEC_FLAG_OF
+	RIVER_SPEC_FLAG_OF,
+	RIVER_SPEC_FLAG_DF
 };
 
 bool Z3SymbolicExecutor::CheckSameSort(unsigned size, Z3_ast *ops) {
@@ -37,10 +38,10 @@ bool Z3SymbolicExecutor::CheckSameSort(unsigned size, Z3_ast *ops) {
 void Z3SymbolicExecutor::InitLazyFlagsOperands(
 		struct SymbolicOperandsLazyFlags *solf,
 		struct SymbolicOperands *ops) {
-	for (int i = 0; i < 4; ++i) {
+	for (int i = 0; i < opCount; ++i) {
 		solf->svBefore[i] = ops->sv[i];
 	}
-	for (int i = 0; i < 7; ++i) {
+	for (int i = 0; i < flagCount; ++i) {
 		solf->svfBefore[i] = ops->svf[i];
 	}
 }
@@ -230,7 +231,7 @@ Z3SymbolicExecutor::Z3SymbolicExecutor(sym::SymbolicEnvironment *e, AbstractForm
 	lazyFlags[5] = new Z3FlagOF();
 	lazyFlags[6] = new Z3FlagDF();
 
-	for (int i = 0; i < 7; ++i) {
+	for (int i = 0; i < flagCount; ++i) {
 		lazyFlags[i]->SetParent(this);
 	}
 
@@ -275,14 +276,14 @@ Z3SymbolicExecutor::~Z3SymbolicExecutor() {
 
 	Z3_solver_dec_ref(context, solver);
 
-	for (int i = 0; i < 7; ++i) {
+	for (int i = 0; i < flagCount; ++i) {
 		delete lazyFlags[i];
 	}
 }
 
 void Z3SymbolicExecutor::StepForward() {
 	Z3_solver_push(context, solver);
-	for (int i = 0; i < 7; ++i) {
+	for (int i = 0; i < flagCount; ++i) {
 		lazyFlags[i]->SaveState(*ls);
 	}
 }
@@ -758,6 +759,34 @@ void Z3SymbolicExecutor::SymbolicExecuteImul(RiverInstruction *instruction, Symb
 }
 
 
+// definitions of lookup index are found in header Z3_FLAG_OP_***
+nodep::BYTE LookupUnsetFlags[] = {
+	/*0x00*/ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+	/*0x10*/ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+	/*0x20*/ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+	/*0x30*/ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+	/*0x40*/ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+	/*0x50*/ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+	/*0x60*/ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+	/*0x70*/ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+	/*0x80*/ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+	/*0x90*/ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+	/*0xA0*/ 0, RIVER_SPEC_FLAG_CF | RIVER_SPEC_FLAG_OF | RIVER_SPEC_FLAG_AF,
+	/*0xA2*/ 0, 0,
+	/*0xA4*/ RIVER_SPEC_FLAG_CF | RIVER_SPEC_FLAG_OF | RIVER_SPEC_FLAG_AF, 0,
+	/*0xA6*/ RIVER_SPEC_FLAG_CF | RIVER_SPEC_FLAG_OF | RIVER_SPEC_FLAG_AF, 0,
+	/*0xA8*/ 0, 0,
+	/*0xAA*/ 0, 0,
+	/*0xAC*/ 0, 0,
+	/*0xAE*/ 0, 0,
+	/*0xB0*/ 0, 0,
+	/*0xB2*/ 0, RIVER_SPEC_FLAG_SF | RIVER_SPEC_FLAG_ZF | RIVER_SPEC_FLAG_AF | RIVER_SPEC_FLAG_PF,
+	/*0xB4*/ RIVER_SPEC_FLAG_CF | RIVER_SPEC_FLAG_OF | RIVER_SPEC_FLAG_SF | RIVER_SPEC_FLAG_AF | RIVER_SPEC_FLAG_PF, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+	/*0xC0*/ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+	/*0xD0*/ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+	/*0xE0*/ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+	/*0xF0*/ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+};
 
 template <Z3SymbolicExecutor::CommonOperation func, unsigned int funcCode> void Z3SymbolicExecutor::SymbolicExecuteCommonOperation(RiverInstruction *instruction, SymbolicOperands *ops) {
 
@@ -766,10 +795,14 @@ template <Z3SymbolicExecutor::CommonOperation func, unsigned int funcCode> void 
 
 	Z3_ast ret = (this->*func)(4, ops);
 	solf.svAfter[0] = ret;
-	for (int i = 0; i < 7; ++i) {
-		if ((1 << i) & instruction->modFlags) {
-			lazyFlags[i]->SetSource(solf, funcCode);
-			env->SetFlgValue(1 << i, lazyFlags[i]);
+	for (int i = 0; i < flagCount; ++i) {
+		if (flagList[i] & instruction->modFlags) {
+			if (LookupUnsetFlags[funcCode] & flagList[i]) {
+				env->UnsetFlgValue(flagList[i]);
+			} else {
+				lazyFlags[i]->SetSource(solf, funcCode);
+				env->SetFlgValue(flagList[i], lazyFlags[i]);
+			}
 		}
 	}
 }
@@ -783,7 +816,7 @@ void Z3SymbolicExecutor::GetSymbolicValues(RiverInstruction *instruction, Symbol
 
 	bool foundSort = false;
 	Z3_sort operandsSort = dwordSort;
-	for (int i = 0; i < 4; ++i) {
+	for (int i = 0; i < opCount; ++i) {
 		if ((OPERAND_BITMASK(i) & opsFlagsMask) && ops->tr[i]) {
 			 Z3_sort localSort = Z3_get_sort(context, (Z3_ast)ops->sv[i]);
 			 if (foundSort && !Z3_is_eq_sort(context, localSort, operandsSort)) {
@@ -796,7 +829,7 @@ void Z3SymbolicExecutor::GetSymbolicValues(RiverInstruction *instruction, Symbol
 		}
 	}
 
-	for (int i = 0; i < 4; ++i) {
+	for (int i = 0; i < opCount; ++i) {
 		if ((OPERAND_BITMASK(i) & opsFlagsMask) && !ops->tr[i]) {
 			ops->sv[i] = Z3_mk_int(context, ops->cvb[i], operandsSort);
 			PRINTF_SYM("mkint %lu size: %u\n", ops->cvb[i],
@@ -931,7 +964,7 @@ void Z3SymbolicExecutor::Execute(RiverInstruction *instruction) {
 	nodep::BOOL uo[4], uof[flagCount];
 	nodep::BOOL isSymb = false;
 
-	for (int i = 0; i < 4; ++i) {
+	for (int i = 0; i < opCount; ++i) {
 		struct OperandInfo opInfo;
 		opInfo.opIdx = (nodep::BYTE)i;
 		opInfo.fields = 0;
@@ -983,9 +1016,9 @@ void Z3SymbolicExecutor::Execute(RiverInstruction *instruction) {
 
 		if (true == (uof[i] = env->GetFlgValue(flagInfo))) {
 			ops.av |= flagInfo.opIdx;
-			isSymb |= 0 != (flagInfo.fields & OP_HAS_SYMBOLIC);
+			isSymb |= (0 != (flagInfo.fields & OP_HAS_SYMBOLIC));
 		}
-		ops.trf[i] = 0 != (flagInfo.fields & OP_HAS_SYMBOLIC);
+		ops.trf[i] = (0 != (flagInfo.fields & OP_HAS_SYMBOLIC));
 		ops.cvfb[i] = flagInfo.concreteBefore;
 		ops.cvfa[i] = flagInfo.concreteAfter;
 		ops.svf[i] = flagInfo.symbolic;
@@ -1001,7 +1034,7 @@ void Z3SymbolicExecutor::Execute(RiverInstruction *instruction) {
 	} else {
 		fprintf(stderr, "<info> Instruction is not symbolic: 0x%08lX\n", instruction->instructionAddress);
 		// unset all modified operands
-		for (int i = 0; i < 4; ++i) {
+		for (int i = 0; i < opCount; ++i) {
 			if (RIVER_SPEC_MODIFIES_OP(i) & instruction->specifiers) {
 				if (ops.sv[i] != nullptr ||
 						(RIVER_SPEC_IGNORES_OP(i) & instruction->specifiers)) {
