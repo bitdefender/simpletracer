@@ -339,14 +339,11 @@ template <Z3SymbolicExecutor::BVFunc func1, Z3SymbolicExecutor::BVFunc func2> Z3
 }
 
 template <Z3SymbolicExecutor::BVFunc func> void Z3SymbolicExecutor::SymbolicJumpCC(RiverInstruction *instruction, SymbolicOperands *ops) {
-	lastCondition = Z3_simplify(
-		context,
-		Z3_mk_eq(
+	lastCondition = Z3_mk_eq(
 			context,
 			(this->*func)(ops),
 			oneFlag
-		)
-	);
+		);
 }
 
 template <Z3SymbolicExecutor::BVFunc func> void Z3SymbolicExecutor::SymbolicSetCC(RiverInstruction *instruction, SymbolicOperands *ops) {
@@ -539,8 +536,12 @@ Z3_ast Z3SymbolicExecutor::ExecuteCmp(unsigned nOps, SymbolicOperands *ops) {
 	Z3_ast o2 = (Z3_ast)ops->sv[1];
 
 	Z3_ast r = Z3_mk_bvsub(context, o1, o2);
+	Z3_error_code err = Z3_get_error_code(context);
+	if (err != Z3_OK) DEBUG_BREAK;
+
 	PRINTF_SYM("cmp %p <= %p, %p\n", r, o1, o2);
 	PrintAST(r);
+
 	return r;
 }
 
