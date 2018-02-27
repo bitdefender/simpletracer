@@ -339,11 +339,25 @@ template <Z3SymbolicExecutor::BVFunc func1, Z3SymbolicExecutor::BVFunc func2> Z3
 }
 
 template <Z3SymbolicExecutor::BVFunc func> void Z3SymbolicExecutor::SymbolicJumpCC(RiverInstruction *instruction, SymbolicOperands *ops) {
+	Z3_ast cond = (this->*func)(ops);
+
 	lastCondition = Z3_mk_eq(
 			context,
-			(this->*func)(ops),
+			cond,
 			oneFlag
 		);
+
+	SymbolicFlag sf;
+	sf.testFlags = instruction->testFlags;
+	for (int i = 0; i < flagCount; ++i) {
+		if (ops->trf[i]) {
+			sf.symbolicFlags[i] = (unsigned int)ops->svf[i];
+		} else {
+			sf.symbolicFlags[i] = 0;
+		}
+	}
+	sf.symbolicCond = (unsigned int)cond;
+	aFormat->WriteZ3SymbolicJumpCC(0, sf);
 }
 
 template <Z3SymbolicExecutor::BVFunc func> void Z3SymbolicExecutor::SymbolicSetCC(RiverInstruction *instruction, SymbolicOperands *ops) {
@@ -988,15 +1002,11 @@ void Z3SymbolicExecutor::Execute(RiverInstruction *instruction) {
 		InitializeOperand(baseOpInfo);
 		baseOpInfo.opIdx = i;
 		hasBase = env->GetAddressBase(baseOpInfo);
-		//printf("[%d] GetAddressBase: riaddr: [%08lx] isTracked: [%d] symb addr: [%p] concrete: [0x%08lX]\n",
-		//		i, instruction->instructionAddress, (int)baseOpInfo.isTracked, baseOpInfo.symbolic, baseOpInfo.concrete);
 
 		InitializeOperand(indexOpInfo);
 		nodep::BYTE scale;
 		indexOpInfo.opIdx = i;
 		hasIndex = env->GetAddressScaleAndIndex(indexOpInfo, scale);
-		//printf("[%d] GetAddressScaleAndIndex:riaddr: [%08lx] isTracked: [%d] symb addr: [%p] concrete: [0x%08lX]\n",
-		//		i, instruction->instructionAddress, (int)indexOpInfo.isTracked, indexOpInfo.symbolic, indexOpInfo.concrete);
 
 		struct OperandInfo opAddressInfo;
 		composedIndeOpInfo = indexOpInfo;
@@ -1005,6 +1015,13 @@ void Z3SymbolicExecutor::Execute(RiverInstruction *instruction) {
 		}
 		AddOperands(baseOpInfo, composedIndeOpInfo, opAddressInfo);
 		if (opAddressInfo.fields & OP_HAS_SYMBOLIC) {
+			SymbolicAddress sa = {
+				.baseAddress = (unsigned int)baseOpInfo.symbolic,
+				.scaleAddress = (unsigned int)scale,
+				.indexAddress = (unsigned int)indexOpInfo.symbolic,
+				.composedAddress = (unsigned int)opAddressInfo.symbolic
+			};
+			aFormat->WriteZ3SymbolicAddress(0, sa);
 			PRINTF_SYM("address %p <= %d * %p + %p\n", opAddressInfo.symbolic,
 					scale, indexOpInfo.symbolic, baseOpInfo.symbolic);
 		}
