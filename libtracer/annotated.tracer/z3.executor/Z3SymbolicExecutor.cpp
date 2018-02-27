@@ -1016,10 +1016,10 @@ void Z3SymbolicExecutor::Execute(RiverInstruction *instruction) {
 		AddOperands(baseOpInfo, composedIndeOpInfo, opAddressInfo);
 		if (opAddressInfo.fields & OP_HAS_SYMBOLIC) {
 			SymbolicAddress sa = {
-				.baseAddress = (unsigned int)baseOpInfo.symbolic,
-				.scaleAddress = (unsigned int)scale,
-				.indexAddress = (unsigned int)indexOpInfo.symbolic,
-				.composedAddress = (unsigned int)opAddressInfo.symbolic
+				.symbolicBase = (unsigned int)baseOpInfo.symbolic,
+				.scale = (unsigned int)scale,
+				.symbolicIndex = (unsigned int)indexOpInfo.symbolic,
+				.composedSymbolicAddress = (unsigned int)opAddressInfo.symbolic
 			};
 			aFormat->WriteZ3SymbolicAddress(0, sa);
 			PRINTF_SYM("address %p <= %d * %p + %p\n", opAddressInfo.symbolic,
