@@ -1019,8 +1019,20 @@ void Z3SymbolicExecutor::Execute(RiverInstruction *instruction) {
 				.symbolicBase = (unsigned int)baseOpInfo.symbolic,
 				.scale = (unsigned int)scale,
 				.symbolicIndex = (unsigned int)indexOpInfo.symbolic,
-				.composedSymbolicAddress = (unsigned int)opAddressInfo.symbolic
+				.composedSymbolicAddress = (unsigned int)opAddressInfo.symbolic,
+				.inputOutput = 0
 			};
+
+			if ((RIVER_SPEC_MODIFIES_OP(i) | RIVER_SPEC_IGNORES_OP(i)) & instruction->specifiers) {
+				sa.inputOutput |= OUTPUT_ADDR;
+			} else if (RIVER_SPEC_MODIFIES_OP(i) & instruction->specifiers) {
+				sa.inputOutput |= INPUT_ADDR | OUTPUT_ADDR;
+			} else if (RIVER_SPEC_IGNORES_OP(i) & instruction->specifiers) {
+				DEBUG_BREAK;
+			} else {
+				sa.inputOutput |= INPUT_ADDR;
+			}
+
 			aFormat->WriteZ3SymbolicAddress(0, sa);
 			PRINTF_SYM("address %p <= %d * %p + %p\n", opAddressInfo.symbolic,
 					scale, indexOpInfo.symbolic, baseOpInfo.symbolic);
