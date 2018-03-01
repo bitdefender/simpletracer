@@ -30,6 +30,7 @@ target_link_libraries(${EXECUTABLE_NAME}
 	${LIBRARY_NAME}
 	format.handler
 	logger
+	tracer
 	)
 
 target_link_libraries(${LIBRARY_NAME}

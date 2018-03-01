@@ -1,7 +1,9 @@
 #include "Z3SymbolicExecutor.h"
-
 #include "CommonCrossPlatform/Common.h"
+
 #include <assert.h>
+
+#include "utils.h"
 
 #define PRINT_DEBUG_SYMBOLIC
 
@@ -996,7 +998,7 @@ void Z3SymbolicExecutor::Execute(RiverInstruction *instruction) {
 		ops.cva[i] = opInfo.concreteAfter;
 		ops.sv[i] = opInfo.symbolic;
 
-		struct OperandInfo baseOpInfo, indexOpInfo, composedIndeOpInfo;
+		struct OperandInfo baseOpInfo, indexOpInfo, composedIndexOpInfo;
 		bool hasIndex = false, hasBase = false;
 
 		InitializeOperand(baseOpInfo);
@@ -1004,16 +1006,17 @@ void Z3SymbolicExecutor::Execute(RiverInstruction *instruction) {
 		hasBase = env->GetAddressBase(baseOpInfo);
 
 		InitializeOperand(indexOpInfo);
-		nodep::BYTE scale;
+		nodep::BYTE scale = 0;
 		indexOpInfo.opIdx = i;
 		hasIndex = env->GetAddressScaleAndIndex(indexOpInfo, scale);
 
 		struct OperandInfo opAddressInfo;
-		composedIndeOpInfo = indexOpInfo;
+		composedIndexOpInfo = indexOpInfo;
 		if (hasIndex) {
-			ComposeScaleAndIndex(scale, composedIndeOpInfo);
+			ComposeScaleAndIndex(scale, composedIndexOpInfo);
 		}
-		AddOperands(baseOpInfo, composedIndeOpInfo, opAddressInfo);
+
+		AddOperands(baseOpInfo, composedIndexOpInfo, opAddressInfo);
 		if (opAddressInfo.fields & OP_HAS_SYMBOLIC) {
 			SymbolicAddress sa = {
 				.symbolicBase = (unsigned int)baseOpInfo.symbolic,
@@ -1032,6 +1035,10 @@ void Z3SymbolicExecutor::Execute(RiverInstruction *instruction) {
 			} else {
 				sa.inputOutput |= INPUT_ADDR;
 			}
+
+			TranslateAddressToBasicBlockPointer(&sa.bbp,
+					instruction->instructionAddress,
+					mCount, mInfo);
 
 			aFormat->WriteZ3SymbolicAddress(0, sa);
 			PRINTF_SYM("address %p <= %d * %p + %p\n", opAddressInfo.symbolic,
