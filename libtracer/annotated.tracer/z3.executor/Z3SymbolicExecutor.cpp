@@ -921,6 +921,7 @@ void Z3SymbolicExecutor::ComposeScaleAndIndex(nodep::BYTE &scale,
 
 void Z3SymbolicExecutor::AddOperands(struct OperandInfo &left,
 		struct OperandInfo &right,
+		unsigned displacement,
 		struct OperandInfo &result)
 {
 	if (left.opIdx == right.opIdx) {
@@ -934,36 +935,42 @@ void Z3SymbolicExecutor::AddOperands(struct OperandInfo &left,
 	result.fields |= (left.fields & OP_HAS_SYMBOLIC) | (right.fields & OP_HAS_SYMBOLIC);
 
 	if (result.fields & OP_HAS_CONCRETE_BEFORE) {
-		result.concreteBefore = left.concreteBefore + right.concreteBefore;
+		result.concreteBefore = left.concreteBefore + right.concreteBefore + displacement;
 	}
 
 	if (result.fields & OP_HAS_CONCRETE_AFTER) {
-		result.concreteAfter = left.concreteAfter + right.concreteAfter;
+		result.concreteAfter = left.concreteAfter + right.concreteAfter + displacement;
 	}
 
 	if (result.fields & OP_HAS_SYMBOLIC) {
 		if (0 == (left.fields & OP_HAS_SYMBOLIC)) {
-			if (0 == left.concreteBefore) {
+			if (0 == (left.concreteBefore + displacement)) {
 				result = right;
 				return;
 			}
 
-			left.symbolic = Z3_mk_int(context, left.concreteBefore, dwordSort);
-			left.fields |= OP_HAS_SYMBOLIC;
+			left.symbolic = Z3_mk_int(context, left.concreteBefore + displacement, dwordSort);
 
-			printf("<sym> mkint %p <= %08lX\n", left.symbolic, left.concreteBefore);
+			if (left.concreteBefore) {
+				left.fields |= OP_HAS_SYMBOLIC;
+			}
+
+			printf("<sym> mkint %p <= %08lX\n", left.symbolic, left.concreteBefore + displacement);
 		}
 
 		if (0 == (right.fields & OP_HAS_SYMBOLIC)) {
-			if (0 == right.concreteBefore) {
+			if (0 == (right.concreteBefore + displacement)) {
 				result = left;
 				return;
 			}
 
-			right.symbolic = Z3_mk_int(context, right.concreteBefore, dwordSort);
-			right.fields |= OP_HAS_SYMBOLIC;
+			right.symbolic = Z3_mk_int(context, right.concreteBefore + displacement, dwordSort);
 
-			printf("<sym> mkint %p <= %08lX\n", right.symbolic, right.concreteBefore);
+			if (right.concreteBefore) {
+				right.fields |= OP_HAS_SYMBOLIC;
+			}
+
+			printf("<sym> mkint %p <= %08lX\n", right.symbolic, right.concreteBefore + displacement);
 		}
 
 		// add two symbolic objects
@@ -1016,13 +1023,21 @@ void Z3SymbolicExecutor::Execute(RiverInstruction *instruction) {
 			ComposeScaleAndIndex(scale, composedIndexOpInfo);
 		}
 
-		AddOperands(baseOpInfo, composedIndexOpInfo, opAddressInfo);
+		struct AddressDisplacement addressDisplacement;
+		bool hasDisplacement = env->GetAddressDisplacement(i, addressDisplacement);
+
+		AddOperands(baseOpInfo, composedIndexOpInfo,
+				addressDisplacement.disp,
+				opAddressInfo);
+
 		if (opAddressInfo.fields & OP_HAS_SYMBOLIC) {
 			SymbolicAddress sa = {
 				.symbolicBase = (unsigned int)baseOpInfo.symbolic,
 				.scale = (unsigned int)scale,
 				.symbolicIndex = (unsigned int)indexOpInfo.symbolic,
 				.composedSymbolicAddress = (unsigned int)opAddressInfo.symbolic,
+				.dispType = 0,
+				.displacement = 0,
 				.inputOutput = 0
 			};
 
@@ -1034,6 +1049,17 @@ void Z3SymbolicExecutor::Execute(RiverInstruction *instruction) {
 				DEBUG_BREAK;
 			} else {
 				sa.inputOutput |= INPUT_ADDR;
+			}
+
+			if (hasDisplacement) {
+				sa.displacement = addressDisplacement.disp;
+				if (addressDisplacement.type & RIVER_ADDR_DISP8) {
+					sa.dispType = DISP8;
+				} else if (addressDisplacement.type & RIVER_ADDR_DISP) {
+					sa.dispType = DISP;
+				} else {
+					DEBUG_BREAK;
+				}
 			}
 
 			TranslateAddressToBasicBlockPointer(&sa.bbp,
