@@ -33,8 +33,12 @@ $ ./scripts/clean_build.sh <branch-name>
 ```
 $ cd ./build-river-tools
 $ export LD_LIBRARY_PATH=${RIVER_SDK_DIR}/lin/lib:`pwd`/lib
-$ ./bin/river.tracer --payload <target-library> < <input_test_case>
+$ ./bin/river.tracer --payload <target-library> [--annotated] [--z3] < <input_test_case>
 ```
 **--payload \<target-library\>** specifies the shared object that you want to trace. This must export the payload that is the tested sw entry point.
+
+**--annotated** adds tainted index data in traces
+
+**--z3** specified together with `--annotated` adds z3 data in traces
 
 **\<input_test_case\>** is corpus file that represents a test case.
