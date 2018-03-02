@@ -359,7 +359,7 @@ template <Z3SymbolicExecutor::BVFunc func> void Z3SymbolicExecutor::SymbolicJump
 		}
 	}
 	sf.symbolicCond = (unsigned int)cond;
-	aFormat->WriteZ3SymbolicJumpCC(0, sf);
+	aFormat->WriteZ3SymbolicJumpCC(0, sf, Z3_ast_to_string(context, (Z3_ast)sf.symbolicCond));
 }
 
 template <Z3SymbolicExecutor::BVFunc func> void Z3SymbolicExecutor::SymbolicSetCC(RiverInstruction *instruction, SymbolicOperands *ops) {
@@ -1066,7 +1066,7 @@ void Z3SymbolicExecutor::Execute(RiverInstruction *instruction) {
 					instruction->instructionAddress,
 					mCount, mInfo);
 
-			aFormat->WriteZ3SymbolicAddress(0, sa);
+			aFormat->WriteZ3SymbolicAddress(0, sa, Z3_ast_to_string(context, (Z3_ast)sa.composedSymbolicAddress));
 			PRINTF_SYM("address %p <= %d * %p + %p\n", opAddressInfo.symbolic,
 					scale, indexOpInfo.symbolic, baseOpInfo.symbolic);
 		}
