@@ -326,10 +326,11 @@ public:
 									Z3_string r = Z3_get_symbol_string(executor->context, sName);
 
 									Z3_ast val;
-									Z3_bool pEval = Z3_eval_func_decl(
+									Z3_bool pEval = Z3_model_eval(
 										executor->context,
 										model,
-										c,
+										ast,
+										Z3_TRUE,
 										&val
 									);
 
