@@ -19,7 +19,7 @@ typedef int(*PayloadHandlerFunc)();
 class AnnotatedTracer;
 
 class CustomObserver : public BasicObserver {
-  public:
+	public:
 		AnnotatedTracer *at;
 
 		sym::SymbolicEnvironment *regEnv;

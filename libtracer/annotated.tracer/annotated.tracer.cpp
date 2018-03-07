@@ -99,9 +99,11 @@ unsigned int CustomObserver::ExecutionControl(void *ctx, void *address) {
 				(DWORD)bbInfo.branchNext[i].address, mCount, mInfo);
 	}
 
+	rev::ExecutionRegs regs;
+	at->ctrl->GetCurrentRegisters(ctx, &regs);
 	struct BasicBlockMeta bbm { bbp, bbInfo.cost, bbInfo.branchType,
-			bbInfo.branchInstruction, bbInfo.nInstructions, nextSize,
-			bbpNext };
+			bbInfo.branchInstruction, regs.esp, bbInfo.nInstructions,
+			nextSize, bbpNext };
 	aFormat->WriteBasicBlock(bbm);
 
 	return EXECUTION_ADVANCE;
