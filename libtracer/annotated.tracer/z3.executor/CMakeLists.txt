@@ -14,6 +14,12 @@ find_library (execution libexecution.so)
 link_directories(${Z3_ROOT}/bin ${Z3_ROOT}/lib)
 find_library (z3 libz3.so)
 
+link_directories(${SMTLIB2_INSTALL}/lib)
+find_library(smtlib2parser libsmtlib2parser.a)
+
+link_directories(${YICES1_INSTALL}/lib)
+find_library(yices libyces.a)
+
 add_executable(${EXECUTABLE_NAME}
 	SymbolicDemoMain.cpp
 	TrackingCookie.cpp
