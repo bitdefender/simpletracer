@@ -37,6 +37,7 @@
 # Gdb peda
 .gdb_history
 peda-session-*.txt
+pidfile
 
 # Sdk and build
 build-river-tools
@@ -46,6 +47,9 @@ trace.simple.out*
 execution.log*
 input*
 in
+.z3-trace
 
 #output
 *.bin
+
+.vscode
