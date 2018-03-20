@@ -5,7 +5,8 @@
 
 #include "utils.h"
 
-#define PRINT_DEBUG_SYMBOLIC
+//#define PRINT_DEBUG_SYMBOLIC
+//#define PRINT_AST
 
 #ifndef PRINT_DEBUG_SYMBOLIC
 #define PRINTF_SYM
@@ -378,12 +379,15 @@ void Z3SymbolicExecutor::PrintSetOperands(unsigned idx) {
 	env->GetOperand(opInfo);
 
 	if (opInfo.symbolic != nullptr) {
-		printf("%s\n", Z3_ast_to_string(context, (Z3_ast)opInfo.symbolic));
+		PrintAST((Z3_ast)opInfo.symbolic);
 	}
 }
 
 void Z3SymbolicExecutor::PrintAST(Z3_ast ast) {
+#ifdef PRINT_AST
 	printf("%s\n", Z3_ast_to_string(context, ast));
+#else
+#endif
 }
 
 template <Z3SymbolicExecutor::BVFunc func> void Z3SymbolicExecutor::SymbolicCmovCC(RiverInstruction *instruction, SymbolicOperands *ops) {

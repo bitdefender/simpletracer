@@ -21,14 +21,6 @@ else()
   set (SMTLIB2_INSTALL $ENV{SMTLIB2_INSTALL_PATH})
 endif()
 
-if (NOT DEFINED ENV{YICES1_INSTALL_PATH})
-  if (NOT DEFINED YICES1_INSTALL)
-      message(FATAL_ERROR "Specify YICES1_INSTALL variable")
-  endif()
-else()
-  set (YICES1_INSTALL $ENV{YICES1_INSTALL_PATH})
-endif()
-
 add_subdirectory (river.format/format.handler)
 
 if (NOT DEFINED ENV{Z3_ROOT_PATH})

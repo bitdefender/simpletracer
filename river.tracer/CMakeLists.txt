@@ -9,9 +9,6 @@ find_library (z3 libz3.so)
 link_directories(${SMTLIB2_INSTALL}/lib)
 find_library(smtlib2parser libsmtlib2parser.a)
 
-link_directories(${YICES1_INSTALL}/lib)
-find_library(yices libyces.a)
-
 link_directories (${CMAKE_BINARY_DIR}/lib $ENV{RIVER_SDK_DIR}/lin/lib)
 find_library (execution libexecution.so)
 find_library (symbolicenvironment libsymbolicenvironment.so)
@@ -33,6 +30,5 @@ target_link_libraries (river.tracer
   format.handler
   logger
   smtlib2parser
-  yices
   )
 install (TARGETS river.tracer DESTINATION ${CMAKE_INSTALL_PREFIX}/bin)

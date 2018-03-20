@@ -25,13 +25,11 @@ $ git clone https://github.com/teodor-stoenescu/simpletracer.git
 
 You need to set up the environment every time there's a new river.sdk release. Do not forget to update [river.sdk](https://github.com/teodor-stoenescu/river.sdk) using the installation guide.
 
-simpletracer uses `smtlib2` and `yices1` for handling `z3` output in binary traces. This situation is covered by `annotated` and `z3` command line options. You must configure `smtlib2` [1] using revision `71aa5eeda268d4118eff2567028fde2a8dcc7c0a` and `yices1` [2] version `1.0.40`. In `river.format` there is a patch that should pe applied in `smtlib2 repo` in order to handle compatibility with cpp and x86-32 architecture. Note that after instalation, the following environment variables must be exported:  
+simpletracer uses `smtlib2` for handling `z3` output in binary traces. This situation is covered by `annotated` and `z3` command line options. You must configure `smtlib2` [1] using revision `71aa5eeda268d4118eff2567028fde2a8dcc7c0a`. In `river.format` there is a patch that should pe applied in `smtlib2 repo` in order to handle compatibility with cpp and x86-32 architecture. Note that after instalation, the following environment variables must be exported:  
 
 `SMTLIB2_INSTALL_PATH`  
-`YICES1_INSTALL_PATH`
 
 [1] https://github.com/fbrausse/smtlib2parser.git  
-[2] http://yices.csl.sri.com/old/download-yices1-full.shtml  
 
 To build simpletracer, run:  
 ```
