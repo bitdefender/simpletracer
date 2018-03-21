@@ -13,14 +13,6 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR}/river.format/include)
 # build targets
 add_subdirectory (river.format/logger)
 
-if (NOT DEFINED ENV{SMTLIB2_INSTALL_PATH})
-  if (NOT DEFINED SMTLIB2_INSTALL)
-      message(FATAL_ERROR "Specify SMTLIB2_INSTALL variable")
-  endif()
-else()
-  set (SMTLIB2_INSTALL $ENV{SMTLIB2_INSTALL_PATH})
-endif()
-
 add_subdirectory (river.format/format.handler)
 
 if (NOT DEFINED ENV{Z3_ROOT_PATH})

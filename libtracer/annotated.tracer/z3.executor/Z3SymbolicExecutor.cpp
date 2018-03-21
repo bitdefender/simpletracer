@@ -2,10 +2,11 @@
 #include "CommonCrossPlatform/Common.h"
 
 #include <assert.h>
+#include <string.h>
 
 #include "utils.h"
 
-//#define PRINT_DEBUG_SYMBOLIC
+#define PRINT_DEBUG_SYMBOLIC
 //#define PRINT_AST
 
 #ifndef PRINT_DEBUG_SYMBOLIC
@@ -13,6 +14,8 @@
 #else
 #define PRINTF_SYM(buffer, format, ...) {printf("<sym> "); printf((buffer), (format), ##__VA_ARGS__);}
 #endif
+
+#define MAX_BENCHMARK_NAME 10
 
 const unsigned char Z3SymbolicExecutor::flagList[] = {
 	RIVER_SPEC_FLAG_CF,
@@ -222,7 +225,7 @@ const unsigned int Z3SymbolicExecutor::Z3SymbolicCpuFlag::lazyMarker = 0xDEADBEE
 /*====================================================================================================*/
 
 Z3SymbolicExecutor::Z3SymbolicExecutor(sym::SymbolicEnvironment *e, AbstractFormat *aFormat) :
-		sym::SymbolicExecutor(e), aFormat(aFormat)
+		sym::SymbolicExecutor(e), aFormat(aFormat), benchmarks(0)
 {
 	symIndex = 1;
 
@@ -341,6 +344,36 @@ template <Z3SymbolicExecutor::BVFunc func1, Z3SymbolicExecutor::BVFunc func2> Z3
 	);
 }
 
+/* AstToBenchmarkString - turns ast node into string
+ *
+ * const_symbol - param that represents a symbol name.
+ * The constraints corresponding to const_symbol are generated
+ * in other system component TODO
+ */
+
+const char *Z3SymbolicExecutor::AstToBenchmarkString(Z3_ast ast, const char *const_name) {
+	char name[MAX_BENCHMARK_NAME];
+	sprintf(name, "test-%d", benchmarks++);
+
+	char logic[] = "QF_IDL";
+
+	Z3_ast formula = Z3_mk_true(context);
+	Z3_symbol const_symbol = Z3_mk_string_symbol(context, const_name);
+
+	Z3_ast assertion = Z3_mk_eq(context,
+			ast,
+			Z3_mk_const(context, const_symbol, Z3_get_sort(context, ast)));
+
+	return Z3_benchmark_to_smtlib_string(context,
+			name,
+			logic,
+			"sat",
+			"",
+			1,
+			&assertion,
+			formula);
+}
+
 template <Z3SymbolicExecutor::BVFunc func> void Z3SymbolicExecutor::SymbolicJumpCC(RiverInstruction *instruction, SymbolicOperands *ops) {
 	Z3_ast cond = (this->*func)(ops);
 
@@ -360,7 +393,13 @@ template <Z3SymbolicExecutor::BVFunc func> void Z3SymbolicExecutor::SymbolicJump
 		}
 	}
 	sf.symbolicCond = (unsigned int)cond;
-	aFormat->WriteZ3SymbolicJumpCC(0, sf, Z3_ast_to_string(context, (Z3_ast)sf.symbolicCond));
+
+	SymbolicAst sast = {
+		.address = AstToBenchmarkString((Z3_ast) sf.symbolicCond, "jump_symbol"),
+	};
+	sast.size = strlen(sast.address);
+
+	aFormat->WriteZ3SymbolicJumpCC(0, sf, sast);
 }
 
 template <Z3SymbolicExecutor::BVFunc func> void Z3SymbolicExecutor::SymbolicSetCC(RiverInstruction *instruction, SymbolicOperands *ops) {
@@ -1070,7 +1109,12 @@ void Z3SymbolicExecutor::Execute(RiverInstruction *instruction) {
 					instruction->instructionAddress,
 					mCount, mInfo);
 
-			aFormat->WriteZ3SymbolicAddress(0, sa, Z3_ast_to_string(context, (Z3_ast)sa.composedSymbolicAddress));
+			SymbolicAst sast = {
+				.address = AstToBenchmarkString((Z3_ast)sa.composedSymbolicAddress, "address_symbol"),
+			};
+			sast.size = strlen(sast.address);
+
+			aFormat->WriteZ3SymbolicAddress(0, sa, sast);
 			PRINTF_SYM("address %p <= %d * %p + %p\n", opAddressInfo.symbolic,
 					scale, indexOpInfo.symbolic, baseOpInfo.symbolic);
 		}
