@@ -25,3 +25,4 @@ endif()
 
 add_subdirectory (libtracer)
 add_subdirectory (river.tracer)
+add_subdirectory (offline.sanitizers)
