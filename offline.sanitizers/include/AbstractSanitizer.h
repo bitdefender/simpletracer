@@ -7,7 +7,5 @@ class AbstractSanitizer {
 	public:
 		AbstractSanitizer() {}
 		virtual ~AbstractSanitizer() {}
-
-		virtual bool Run(FILE *input) = 0;
 };
 #endif

@@ -7,7 +7,3 @@ AddressSanitizer::AddressSanitizer()
 {}
 
 AddressSanitizer::~AddressSanitizer() {}
-
-bool AddressSanitizer::Run(FILE *input) {
-	return true;
-}

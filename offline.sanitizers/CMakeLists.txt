@@ -10,6 +10,7 @@ add_subdirectory(address.sanitizer)
 #add_subdirectory(memory.sanitizer)
 
 add_executable(${EXECUTABLE_NAME}
+	TraceParser.cpp
 	SanitizerMain.cpp
 	)
 

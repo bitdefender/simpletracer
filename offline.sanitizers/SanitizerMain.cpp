@@ -1,6 +1,7 @@
 #include "ezOptionParser.h"
 
 #include "AddressSanitizer.h"
+#include "TraceParser.h"
 
 int main(int argc, const char *argv[]) {
 	ez::ezOptionParser opt;
@@ -36,17 +37,24 @@ int main(int argc, const char *argv[]) {
 		}
 	}
 
+	TraceParser *parser = new TraceParser();
+
+	if (!parser->Parse(input)) {
+		fclose(input);
+		return -1;
+	}
+
 	AbstractSanitizer *sanitizer;
 	if (opt.isSet("--address")) {
 		sanitizer = new AddressSanitizer();
 	} else if (opt.isSet("--memory")) {
+		//handle memory sanitizer
 	} else {
 		printf("Error: Specify sanitization type: [--address | --memory]\n");
 		fclose(input);
 		return -1;
 	}
 
-	sanitizer->Run(input);
 	fclose(input);
 
 	return 0;

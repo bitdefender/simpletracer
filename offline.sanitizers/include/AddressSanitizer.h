@@ -7,7 +7,5 @@ class AddressSanitizer : public AbstractSanitizer {
 	public:
 		AddressSanitizer();
 		~AddressSanitizer();
-
-		virtual bool Run(FILE *input);
 };
 #endif
