@@ -7,7 +7,9 @@
 
 #include <vector>
 
+#ifndef FLAG_LEN
 #define FLAG_LEN ((1 << 3) - 1)
+#endif
 
 struct BareBasicBlock {
 	unsigned int offset;
@@ -59,5 +61,9 @@ class TraceParser {
 	private:
 		std::vector<struct AddressAssertion> addrAssertions;
 		std::vector<struct JccCondition> jccConditions;
+
+		int ReadFromStream(unsigned char *buff, size_t size, FILE *input);
+		int SmtToAst(Z3_ast *ast, char *smt, size_t size);
+		void DebugPrint(unsigned type);
 };
 #endif

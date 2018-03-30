@@ -29,7 +29,7 @@ int main(int argc, const char *argv[]) {
 	if (opt.isSet("-i")) {
 		std::string fName;
 
-		opt.get("-m")->getString(fName);
+		opt.get("-i")->getString(fName);
 		input = fopen(fName.c_str(), "r");
 
 		if (input == NULL) {
