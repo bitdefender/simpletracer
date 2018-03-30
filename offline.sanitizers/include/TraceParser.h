@@ -2,6 +2,7 @@
 #define __TRACE_PARSER__
 
 #include "z3.h"
+#include "Z3Handler.h"
 
 #include "CommonCrossPlatform/Common.h"
 
@@ -61,6 +62,7 @@ class TraceParser {
 	private:
 		std::vector<struct AddressAssertion> addrAssertions;
 		std::vector<struct JccCondition> jccConditions;
+		Z3Handler z3Handler;
 
 		int ReadFromStream(unsigned char *buff, size_t size, FILE *input);
 		int SmtToAst(Z3_ast *ast, char *smt, size_t size);

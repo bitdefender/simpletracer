@@ -1,4 +1,5 @@
 #include "TraceParser.h"
+#include "Z3Handler.h"
 #undef FLAG_LEN
 #include "BinFormat.h"
 
@@ -9,7 +10,9 @@
 
 #define MAX_BUFF (1 << 15)
 
-TraceParser::TraceParser() {}
+TraceParser::TraceParser()
+	: z3Handler()
+{}
 
 TraceParser::~TraceParser() {}
 
@@ -29,7 +32,7 @@ bool TraceParser::Parse(FILE *input) {
 		DEBUG_BREAK;
 
 	// traceparser structs
-	struct BareBasicBlock bbb;
+	struct BasicBlock bb;
 
 	while (!feof(input)) {
 		ret = ReadFromStream(buff, sizeof(*bleh), input);
@@ -48,29 +51,54 @@ bool TraceParser::Parse(FILE *input) {
 
 		ble = (BinLogEntry *)buff;
 
+		int next = 0;
+		int symbolicType = 0;
 		switch(bleh->entryType) {
 			case ENTRY_TYPE_TEST_NAME:
-			case ENTRY_TYPE_BB_NEXT_MODULE:
-			case ENTRY_TYPE_BB_OFFSET:
 			case ENTRY_TYPE_INPUT_USAGE:
-			case ENTRY_TYPE_BB_NEXT_OFFSET:
 			case ENTRY_TYPE_TAINTED_INDEX:
 			case ENTRY_TYPE_BB_MODULE:
 				break;
-			case ENTRY_TYPE_Z3_MODULE:
-				// symbolic address coming
-				strncpy(bbb.module, (char *)&ble->data, bleh->entryLength);
-				bbb.module[bleh->entryLength + 1] = 0;
-				break;
-			case ENTRY_TYPE_Z3_SYMBOLIC:
-				switch(ble->data.asZ3Symbolic.header.entryType) {
+			case ENTRY_TYPE_BB_OFFSET:
+				if (symbolicType == 0) {
+					continue;
+				}
+				switch(symbolicType) {
 					case Z3_SYMBOLIC_TYPE_ADDRESS:
+						bb.assertionData.asAddress.esp = ble->data.asBBOffset.esp;
+						symbolicType = 0;
 						break;
 					case Z3_SYMBOLIC_TYPE_JCC:
+						bb.assertionData.asJcc.jumpType = ble->data.asBBOffset.jumpType;
+						bb.assertionData.asJcc.jumpInstruction = ble->data.asBBOffset.jumpInstruction;
+						// must fill next as well
 						break;
-					default:
-						DEBUG_BREAK;
 				}
+				break;
+			case ENTRY_TYPE_BB_NEXT_OFFSET:
+				if (symbolicType == 0) {
+					continue;
+				}
+				bb.assertionData.asJcc.next[next++].offset = ble->data.asBBNextOffset.offset;
+				if (next > 1)
+					symbolicType = 0;
+
+				break;
+			case ENTRY_TYPE_BB_NEXT_MODULE:
+				if (symbolicType == 0) {
+					continue;
+				}
+				//TODO
+				break;
+			case ENTRY_TYPE_Z3_MODULE:
+				// symbolic address coming
+				strncpy(bb.current.module,
+						(char *)&ble->data, bleh->entryLength);
+				bb.current.module[bleh->entryLength + 1] = 0;
+				break;
+			case ENTRY_TYPE_Z3_SYMBOLIC:
+				bb.current.offset = ble->data.asZ3Symbolic.source.z3SymbolicAddress.offset;
+				symbolicType = ble->data.asZ3Symbolic.header.entryType;
 				break;
 			case ENTRY_TYPE_Z3_AST:
 				Z3_ast ast;
@@ -94,7 +122,11 @@ int TraceParser::ReadFromStream(unsigned char* buff, size_t size, FILE *input) {
 }
 
 int TraceParser::SmtToAst(Z3_ast *ast, char *smt, size_t size) {
-	return 0;
+	*ast = z3Handler.toAst(smt, size);
+	if (ast  == nullptr)
+		return false;
+
+	return true;
 }
 
 void TraceParser::DebugPrint(unsigned type) {
