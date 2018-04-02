@@ -52,6 +52,14 @@ struct JccCondition {
 	Z3_ast symbolicCondition;		//Z3 formula for jump condition
 };
 
+enum ParserState {
+	NONE = 0,
+	Z3_MODULE,
+	Z3_SYMBOLIC_OBJECT,
+	Z3_AST,
+	Z3_OFFSET
+};
+
 class TraceParser {
 	public:
 		TraceParser();
@@ -63,9 +71,11 @@ class TraceParser {
 		std::vector<struct AddressAssertion> addrAssertions;
 		std::vector<struct JccCondition> jccConditions;
 		Z3Handler z3Handler;
+		int state;
 
 		int ReadFromStream(unsigned char *buff, size_t size, FILE *input);
-		int SmtToAst(Z3_ast *ast, char *smt, size_t size);
+		int SmtToAst(Z3_ast &ast, char *smt, size_t size);
 		void DebugPrint(unsigned type);
+		void PrintState();
 };
 #endif
