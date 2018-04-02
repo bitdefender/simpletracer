@@ -3,6 +3,7 @@
 #undef FLAG_LEN
 #include "BinFormat.h"
 
+#include "revtracer/river.h"
 #include "CommonCrossPlatform/Common.h"
 
 #include <string.h>
@@ -26,7 +27,7 @@ TraceParser::~TraceParser() {}
  * 3. bare trace entry - metadata
  */
 bool TraceParser::Parse(FILE *input) {
-	int ret;
+	int ret, next = 0, symbolicType;
 	// binformat structs
 	BinLogEntryHeader *bleh;
 	BinLogEntry *ble;
@@ -38,9 +39,10 @@ bool TraceParser::Parse(FILE *input) {
 	struct BasicBlock bb;
 	struct AddressAssertion addrAssertion;
 	struct JccCondition jccCond;
+	memset(&bb, 0, sizeof(bb));
+	memset(&addrAssertion, 0, sizeof(addrAssertion));
+	memset(&jccCond, 0, sizeof(jccCond));
 
-	int next = 0;
-	int symbolicType = 0;
 	while (!feof(input)) {
 		ret = ReadFromStream(buff, sizeof(*bleh), input);
 		if (ret < 0) {
@@ -174,17 +176,22 @@ bool TraceParser::Parse(FILE *input) {
 						addrAssertion.symbolicAddress = ast;
 						addrAssertion.basicBlock = bb;
 
+						DebugPrint(addrAssertion);
 						addrAssertions.push_back(addrAssertion);
+						memset(&addrAssertion, 0, sizeof(addrAssertion));
 						break;
 					case Z3_SYMBOLIC_TYPE_JCC:
 						jccCond.symbolicCondition = ast;
 						jccCond.basicBlock = bb;
 
+						DebugPrint(jccCond);
 						jccConditions.push_back(jccCond);
+						memset(&jccCond, 0, sizeof(jccCond));
 						break;
 					default:
 						DEBUG_BREAK;
 				}
+				memset(&bb, 0, sizeof(bb));
 				break;
 			default:
 				DEBUG_BREAK;
@@ -229,6 +236,88 @@ void TraceParser::DebugPrint(unsigned type) {
 
 	printf(">\n");
 
+}
+
+static const char flagNames[FLAG_LEN][3] = {"CF", "PF", "AF", "ZF", "SF",
+"OF", "DF"};
+
+void TraceParser::PrintJump(unsigned short jumpType, unsigned short jumpInstruction) {
+	switch(jumpType) {
+		case RIVER_JUMP_TYPE_IMM:
+			printf("type imm;");
+			break;
+		case RIVER_JUMP_TYPE_MEM:
+			printf("type mem;");
+			break;
+		case RIVER_JUMP_TYPE_REG:
+			printf("type reg;");
+			break;
+		default:
+			printf("0x%02X;", jumpType);
+	}
+	printf(" ");
+
+	switch(jumpInstruction) {
+		case RIVER_JUMP_INSTR_RET:
+			printf("instr ret;");
+			break;
+		case RIVER_JUMP_INSTR_JMP:
+			printf("instr jump;");
+			break;
+		case RIVER_JUMP_INSTR_JXX:
+			printf("instr jxx;");
+			break;
+		case RIVER_JUMP_INSTR_CALL:
+			printf("instr call;");
+			break;
+		case RIVER_JUMP_INSTR_SYSCALL:
+			printf("instr syscall;");
+			break;
+		default:
+			printf("0x%02X;", jumpInstruction);
+	}
+}
+
+void TraceParser::DebugPrint(const struct JccCondition &jccCondition) {
+	printf("JccCondition %d: %s + 0x%08X\n", jccConditions.size(),
+			jccCondition.basicBlock.current.module,
+			jccCondition.basicBlock.current.offset);
+	printf("JccCondition : %p <=", (void *)jccCondition.condition);
+	for (int i = 0; i < FLAG_LEN; ++i) {
+		if (jccCondition.testFlags & (1 << i)) {
+			printf("%s[%p]", flagNames[i],
+					(void *)jccCondition.symbolicFlags[i]);
+		}
+	}
+	printf("\n");
+	printf("JccCondition: ");
+	PrintJump(jccCondition.basicBlock.assertionData.asJcc.jumpType,
+			jccCondition.basicBlock.assertionData.asJcc.jumpInstruction);
+	printf("\n");
+	for (int i = 0; i < 2; ++i) {
+		printf("JccCondition next[%d]: %s + 0x%08X\n", i,
+				jccCondition.basicBlock.assertionData.asJcc.next[i].module,
+				jccCondition.basicBlock.assertionData.asJcc.next[i].offset);
+	}
+
+}
+
+void TraceParser::DebugPrint(const struct AddressAssertion &addrAssertion) {
+	printf("AddressAssertion %d: + 0x%08X\n", addrAssertions.size(),
+			addrAssertion.offset);
+	printf("AddressAssertion %p <= %p + %d * %p + %d\n",
+			(void *)addrAssertion.symbolicAddress,
+			(void *)addrAssertion.symbolicBase,
+			addrAssertion.scale,
+			(void *)addrAssertion.symbolicIndex,
+			addrAssertion.displacement);
+	printf("AddressAssertion i[%d]/o[%d]\n", addrAssertion.input,
+			addrAssertion.output);
+
+	printf("AddressAssertion bb: %s + 0x%0xlx esp: 0x%08X\n",
+			addrAssertion.basicBlock.current.module,
+			addrAssertion.basicBlock.current.offset,
+			addrAssertion.basicBlock.assertionData.asAddress.esp);
 }
 
 void TraceParser::PrintState() {

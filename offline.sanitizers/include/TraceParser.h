@@ -34,7 +34,7 @@ struct BasicBlock {
 
 // address = base + scale x index + displacement
 struct AddressAssertion {
-	unsigned int offset;			//
+	unsigned int offset;			//code offset in module
 	unsigned int symbolicBase;		//symbolic value of base
 	unsigned int scale;				//concrete value of scale
 	unsigned int symbolicIndex;		//symbolic value of index
@@ -76,6 +76,9 @@ class TraceParser {
 		int ReadFromStream(unsigned char *buff, size_t size, FILE *input);
 		int SmtToAst(Z3_ast &ast, char *smt, size_t size);
 		void DebugPrint(unsigned type);
+		void DebugPrint(const struct AddressAssertion &addrAssertion);
+		void DebugPrint(const struct JccCondition &jccCondition);
 		void PrintState();
+		void PrintJump(unsigned short jumpType, unsigned short jumpInstruction);
 };
 #endif
