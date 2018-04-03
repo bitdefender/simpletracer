@@ -39,6 +39,7 @@ struct AddressAssertion {
 	unsigned int scale;				//concrete value of scale
 	unsigned int symbolicIndex;		//symbolic value of index
 	unsigned int displacement;		//concrete value of displacement
+	unsigned int composedAddress;   //symbolic value of address
 	bool input; bool output;		//read from or written to symbolicAddress
 	struct BasicBlock basicBlock;   //basic block info to be used in assertions
 	Z3_ast symbolicAddress;         //Z3 formula for address
@@ -73,6 +74,10 @@ class TraceParser {
 		Z3Handler z3Handler;
 		int state;
 
+		struct BasicBlock tmpBasicBlock;
+		struct AddressAssertion tmpAddrAssertion;
+		struct JccCondition tmpJccCond;
+
 		int ReadFromStream(unsigned char *buff, size_t size, FILE *input);
 		int SmtToAst(Z3_ast &ast, char *smt, size_t size);
 		void DebugPrint(unsigned type);
@@ -80,5 +85,6 @@ class TraceParser {
 		void DebugPrint(const struct JccCondition &jccCondition);
 		void PrintState();
 		void PrintJump(unsigned short jumpType, unsigned short jumpInstruction);
+		void CleanTempStructs();
 };
 #endif
