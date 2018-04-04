@@ -9,6 +9,8 @@
 #include <string.h>
 #include <stdlib.h>
 
+#include "Common.h"
+
 #define MAX_BUFF (1 << 15)
 
 TraceParser::TraceParser()
@@ -240,23 +242,23 @@ int TraceParser::SmtToAst(Z3_ast &ast, char *smt, size_t size) {
 }
 
 void TraceParser::DebugPrint(unsigned type) {
-	printf("Received data: %04X<", (unsigned short)type);
+	PRINT("Received data: %04X<", (unsigned short)type);
 	switch(type) {
 	case ENTRY_TYPE_Z3_MODULE:
-		printf("Z3 module name");
+		PRINT("Z3 module name");
 		break;
 	case ENTRY_TYPE_Z3_SYMBOLIC:
-		printf("Z3 symbolic data");
+		PRINT("Z3 symbolic data");
 		break;
 	case ENTRY_TYPE_Z3_AST:
-		printf("Z3 ast");
+		PRINT("Z3 ast");
 		break;
 	default:
-		printf("unk");
+		PRINT("unk");
 		break;
 	}
 
-	printf(">\n");
+	PRINT(">\n");
 
 }
 
@@ -266,38 +268,38 @@ static const char flagNames[FLAG_LEN][3] = {"CF", "PF", "AF", "ZF", "SF",
 void TraceParser::PrintJump(unsigned short jumpType, unsigned short jumpInstruction) {
 	switch(jumpType) {
 		case RIVER_JUMP_TYPE_IMM:
-			printf("type imm;");
+			PRINT("type imm;");
 			break;
 		case RIVER_JUMP_TYPE_MEM:
-			printf("type mem;");
+			PRINT("type mem;");
 			break;
 		case RIVER_JUMP_TYPE_REG:
-			printf("type reg;");
+			PRINT("type reg;");
 			break;
 		default:
 			break;
-			printf("0x%02X;", jumpType);
+			PRINT("0x%02X;", jumpType);
 	}
-	printf(" ");
+	PRINT(" ");
 
 	switch(jumpInstruction) {
 		case RIVER_JUMP_INSTR_RET:
-			printf("instr ret;");
+			PRINT("instr ret;");
 			break;
 		case RIVER_JUMP_INSTR_JMP:
-			printf("instr jump;");
+			PRINT("instr jump;");
 			break;
 		case RIVER_JUMP_INSTR_JXX:
-			printf("instr jxx;");
+			PRINT("instr jxx;");
 			break;
 		case RIVER_JUMP_INSTR_CALL:
-			printf("instr call;");
+			PRINT("instr call;");
 			break;
 		case RIVER_JUMP_INSTR_SYSCALL:
-			printf("instr syscall;");
+			PRINT("instr syscall;");
 			break;
 		default:
-			printf("0x%02X;", jumpInstruction);
+			PRINT("0x%02X;", jumpInstruction);
 	}
 }
 
@@ -306,23 +308,23 @@ void TraceParser::DebugPrint(Z3_ast ast) {
 }
 
 void TraceParser::DebugPrint(const struct JccCondition &jccCondition) {
-	printf("JccCondition %d: %s + 0x%08X\n", jccConditions.size(),
+	PRINT("JccCondition %d: %s + 0x%08X\n", jccConditions.size(),
 			jccCondition.basicBlock.current.module,
 			jccCondition.basicBlock.current.offset);
-	printf("JccCondition : %p <=", (void *)jccCondition.condition);
+	PRINT("JccCondition : %p <=", (void *)jccCondition.condition);
 	for (int i = 0; i < FLAG_LEN; ++i) {
 		if (jccCondition.testFlags & (1 << i)) {
-			printf("%s[%p]", flagNames[i],
+			PRINT("%s[%p]", flagNames[i],
 					(void *)jccCondition.symbolicFlags[i]);
 		}
 	}
-	printf("\n");
-	printf("JccCondition: ");
+	PRINT("\n");
+	PRINT("JccCondition: ");
 	PrintJump(jccCondition.basicBlock.assertionData.asJcc.jumpType,
 			jccCondition.basicBlock.assertionData.asJcc.jumpInstruction);
-	printf("\n");
+	PRINT("\n");
 	for (int i = 0; i < 2; ++i) {
-		printf("JccCondition next[%d]: %s + 0x%08X\n", i,
+		PRINT("JccCondition next[%d]: %s + 0x%08X\n", i,
 				jccCondition.basicBlock.assertionData.asJcc.next[i].module,
 				jccCondition.basicBlock.assertionData.asJcc.next[i].offset);
 	}
@@ -330,18 +332,18 @@ void TraceParser::DebugPrint(const struct JccCondition &jccCondition) {
 }
 
 void TraceParser::DebugPrint(const struct AddressAssertion &addrAssertion) {
-	printf("AddressAssertion %d: + 0x%08X\n", addrAssertions.size(),
+	PRINT("AddressAssertion %d: + 0x%08X\n", addrAssertions.size(),
 			tmpAddrAssertion.offset);
-	printf("AddressAssertion %p <= %p + %d * %p + %d\n",
+	PRINT("AddressAssertion %p <= %p + %d * %p + %d\n",
 			(void *)tmpAddrAssertion.composedAddress,
 			(void *)tmpAddrAssertion.symbolicBase,
 			tmpAddrAssertion.scale,
 			(void *)tmpAddrAssertion.symbolicIndex,
 			tmpAddrAssertion.displacement);
-	printf("AddressAssertion i[%d]/o[%d]\n", tmpAddrAssertion.input,
+	PRINT("AddressAssertion i[%d]/o[%d]\n", tmpAddrAssertion.input,
 			tmpAddrAssertion.output);
 
-	printf("AddressAssertion tmpBasicBlock: %s + 0x%08X esp: 0x%08X\n",
+	PRINT("AddressAssertion tmpBasicBlock: %s + 0x%08X esp: 0x%08X\n",
 			tmpAddrAssertion.basicBlock.current.module,
 			tmpAddrAssertion.basicBlock.current.offset,
 			tmpAddrAssertion.basicBlock.assertionData.asAddress.esp);
@@ -349,27 +351,27 @@ void TraceParser::DebugPrint(const struct AddressAssertion &addrAssertion) {
 }
 
 void TraceParser::PrintState() {
-	printf("state: ");
+	PRINT("state: ");
 	switch(state) {
 		case NONE:
-			printf("NONE");
+			PRINT("NONE");
 			break;
 		case Z3_MODULE:
-			printf("Z3_MODULE");
+			PRINT("Z3_MODULE");
 			break;
 		case Z3_SYMBOLIC_OBJECT:
-			printf("Z3_SYMBOLIC_OBJECT");
+			PRINT("Z3_SYMBOLIC_OBJECT");
 			break;
 		case Z3_AST:
-			printf("Z3_AST");
+			PRINT("Z3_AST");
 			break;
 		case Z3_OFFSET:
-			printf("Z3_OFFSET");
+			PRINT("Z3_OFFSET");
 			break;
 		default:
 			DEBUG_BREAK;
 	}
-	printf("\n");
+	PRINT("\n");
 }
 
 void TraceParser::CleanTempStructs() {

@@ -3,6 +3,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "Common.h"
+
 Z3_context mk_context_custom(Z3_config cfg, Z3_error_handler err);
 
 Z3_context mk_context() {
@@ -62,5 +64,5 @@ Z3_ast Z3Handler::toAst(char *smt, size_t size) {
 void Z3Handler::PrintAst(Z3_ast ast) {
 	Z3_set_ast_print_mode(context, (Z3_ast_print_mode)2);
 	Z3_set_ast_print_mode(context, Z3_PRINT_SMTLIB2_COMPLIANT);
-	printf("%s\n", Z3_ast_to_string(context, ast));
+	PRINT("%s\n", Z3_ast_to_string(context, ast));
 }
