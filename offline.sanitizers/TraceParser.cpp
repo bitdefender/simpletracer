@@ -15,6 +15,9 @@ TraceParser::TraceParser()
 	: z3Handler()
 {
 	state = NONE;
+	memset(lastModule, 0, MAX_PATH + 1);
+	memset(lastNextModule, 0, MAX_PATH + 1);
+	CleanTempStructs();
 }
 
 TraceParser::~TraceParser() {}
@@ -64,14 +67,14 @@ bool TraceParser::Parse(FILE *input) {
 			case ENTRY_TYPE_INPUT_USAGE:
 			case ENTRY_TYPE_TAINTED_INDEX:
 			case ENTRY_TYPE_BB_MODULE:
+				ExchageModule(lastModule,
+						(char *)&ble->data,
+						bleh->entryLength);
 				if (state == NONE)
 					break;
 				if (state < Z3_AST)
 					DEBUG_BREAK;
 				state = Z3_OFFSET;
-				strncpy(tmpBasicBlock.current.module,
-						(char *)&ble->data, bleh->entryLength);
-				tmpBasicBlock.current.module[bleh->entryLength + 1] = 0;
 				break;
 			case ENTRY_TYPE_BB_OFFSET:
 				if (state == NONE) {
@@ -113,12 +116,22 @@ bool TraceParser::Parse(FILE *input) {
 				if (next > 1) {
 					switch(symbolicType) {
 						case Z3_SYMBOLIC_TYPE_ADDRESS:
-							memcpy(&tmpAddrAssertion.basicBlock, &tmpBasicBlock, sizeof(tmpBasicBlock));
+							tmpAddrAssertion.basicBlock = tmpBasicBlock;
+							strcpy(tmpAddrAssertion.basicBlock.current.module, lastModule);
 							DebugPrint(tmpAddrAssertion);
 							addrAssertions.push_back(tmpAddrAssertion);
 							break;
 						case Z3_SYMBOLIC_TYPE_JCC:
-							memcpy(&tmpJccCond.basicBlock, &tmpBasicBlock, sizeof(tmpBasicBlock));
+							tmpJccCond.basicBlock = tmpBasicBlock;
+							strcpy(tmpJccCond.basicBlock.current.module, lastModule);
+
+							for (int i = 0; i < 2; ++i) {
+								if (tmpJccCond.basicBlock.assertionData.asJcc.next[i].module[0] == 0) {
+									strcpy(tmpJccCond.basicBlock.assertionData.asJcc.next[i].module,
+											lastNextModule);
+								}
+							}
+
 							DebugPrint(tmpJccCond);
 							jccConditions.push_back(tmpJccCond);
 							break;
@@ -132,22 +145,26 @@ bool TraceParser::Parse(FILE *input) {
 
 				break;
 			case ENTRY_TYPE_BB_NEXT_MODULE:
+				ExchageModule(lastNextModule, (char *)&ble->data, bleh->entryLength);
 				if (state == NONE) {
 					break;
 				}
 
 				if (state != Z3_OFFSET)
 					DEBUG_BREAK;
-				// TODO
+
+				if (symbolicType == Z3_SYMBOLIC_TYPE_JCC) {
+					memset(tmpJccCond.basicBlock.assertionData.asJcc.next[next].module, 0, MAX_PATH + 1);
+					strncpy(tmpJccCond.basicBlock.assertionData.asJcc.next[next].module,
+							(char *)&ble->data, bleh->entryLength);
+				}
 				break;
 			case ENTRY_TYPE_Z3_MODULE:
 				if (state != NONE)
 					DEBUG_BREAK;
 				state = Z3_MODULE;
 
-				strncpy(tmpBasicBlock.current.module,
-						(char *)&ble->data, bleh->entryLength);
-				tmpBasicBlock.current.module[bleh->entryLength + 1] = 0;
+				ExchageModule(lastModule, (char *)&ble->data, bleh->entryLength);
 				break;
 			case ENTRY_TYPE_Z3_SYMBOLIC:
 				if (!(state == NONE || state == Z3_MODULE))
@@ -353,4 +370,18 @@ void TraceParser::CleanTempStructs() {
 	memset(&tmpBasicBlock, 0, sizeof(tmpBasicBlock));
 	memset(&tmpAddrAssertion, 0, sizeof(tmpAddrAssertion));
 	memset(&tmpJccCond, 0, sizeof(tmpJccCond));
+}
+
+void TraceParser::ExchageModule(char *dest, char *moduleName, size_t size) {
+	if (size > MAX_PATH)
+		DEBUG_BREAK;
+
+	if (size <= 0)
+		return;
+
+	if (strcmp(dest, moduleName) != 0) {
+		memset(dest, 0, MAX_PATH + 1);
+		strncpy(dest, moduleName, size);
+		dest[size] = 0;
+	}
 }

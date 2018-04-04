@@ -14,7 +14,7 @@
 
 struct BareBasicBlock {
 	unsigned int offset;
-	char module[MAX_PATH];
+	char module[MAX_PATH + 1];
 };
 
 struct BasicBlock {
@@ -30,6 +30,14 @@ struct BasicBlock {
 			struct BareBasicBlock next[2];
 		} asJcc;
 	} assertionData;
+
+	struct BasicBlock & operator=(const struct BasicBlock &other) {
+		if (this != &other) {
+			this->current = other.current;
+			this->assertionData = other.assertionData;
+		}
+		return *this;
+	}
 };
 
 // address = base + scale x index + displacement
@@ -74,6 +82,9 @@ class TraceParser {
 		Z3Handler z3Handler;
 		int state;
 
+		char lastModule[MAX_PATH + 1];
+		char lastNextModule[MAX_PATH + 1];
+
 		struct BasicBlock tmpBasicBlock;
 		struct AddressAssertion tmpAddrAssertion;
 		struct JccCondition tmpJccCond;
@@ -86,5 +97,6 @@ class TraceParser {
 		void PrintState();
 		void PrintJump(unsigned short jumpType, unsigned short jumpInstruction);
 		void CleanTempStructs();
+		void ExchageModule(char *dest, char *moduleName, size_t size);
 };
 #endif
