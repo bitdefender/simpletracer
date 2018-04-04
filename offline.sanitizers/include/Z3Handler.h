@@ -11,6 +11,7 @@ class Z3Handler {
 		Z3Handler();
 		~Z3Handler();
 		Z3_ast toAst(char *smt, size_t size);
+		void PrintAst(Z3_ast ast);
 
 	private:
 		Z3_context context;

@@ -91,6 +91,7 @@ class TraceParser {
 
 		int ReadFromStream(unsigned char *buff, size_t size, FILE *input);
 		int SmtToAst(Z3_ast &ast, char *smt, size_t size);
+		void DebugPrint(Z3_ast ast);
 		void DebugPrint(unsigned type);
 		void DebugPrint(const struct AddressAssertion &addrAssertion);
 		void DebugPrint(const struct JccCondition &jccCondition);

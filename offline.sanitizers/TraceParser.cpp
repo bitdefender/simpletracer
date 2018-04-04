@@ -301,6 +301,10 @@ void TraceParser::PrintJump(unsigned short jumpType, unsigned short jumpInstruct
 	}
 }
 
+void TraceParser::DebugPrint(Z3_ast ast) {
+	z3Handler.PrintAst(ast);
+}
+
 void TraceParser::DebugPrint(const struct JccCondition &jccCondition) {
 	printf("JccCondition %d: %s + 0x%08X\n", jccConditions.size(),
 			jccCondition.basicBlock.current.module,
@@ -322,6 +326,7 @@ void TraceParser::DebugPrint(const struct JccCondition &jccCondition) {
 				jccCondition.basicBlock.assertionData.asJcc.next[i].module,
 				jccCondition.basicBlock.assertionData.asJcc.next[i].offset);
 	}
+	DebugPrint(jccCondition.symbolicCondition);
 }
 
 void TraceParser::DebugPrint(const struct AddressAssertion &addrAssertion) {
@@ -340,6 +345,7 @@ void TraceParser::DebugPrint(const struct AddressAssertion &addrAssertion) {
 			tmpAddrAssertion.basicBlock.current.module,
 			tmpAddrAssertion.basicBlock.current.offset,
 			tmpAddrAssertion.basicBlock.assertionData.asAddress.esp);
+	DebugPrint(tmpAddrAssertion.symbolicAddress);
 }
 
 void TraceParser::PrintState() {
