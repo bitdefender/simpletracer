@@ -3,6 +3,9 @@
 
 #include <stdio.h>
 
+#include "Z3Handler.h"
+#include "TraceParser.h"
+
 class AbstractSanitizer {
 	public:
 		AbstractSanitizer() {}

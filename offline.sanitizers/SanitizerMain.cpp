@@ -55,6 +55,18 @@ int main(int argc, const char *argv[]) {
 		return -1;
 	}
 
+	Z3Handler *handler;
+   	parser->GetHandler(handler);
+	((AddressSanitizer *)sanitizer)->setZ3Handler(handler);
+
+	bool ret = true;
+	int index = 0;
+	while (ret) {
+		struct AddressAssertion *addrAssertion;
+		ret = parser->GetAddressAssertion(index++, addrAssertion);
+		((AddressSanitizer *)sanitizer)->sanitize(*addrAssertion);
+	}
+
 	fclose(input);
 
 	return 0;

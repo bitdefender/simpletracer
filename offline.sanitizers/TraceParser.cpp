@@ -1,5 +1,7 @@
 #include "TraceParser.h"
 #include "Z3Handler.h"
+#include "AddressSanitizer.h"
+#include "AbstractSanitizer.h"
 #undef FLAG_LEN
 #include "BinFormat.h"
 
@@ -223,6 +225,7 @@ bool TraceParser::Parse(FILE *input) {
 		}
 	}
 	free(buff);
+	return true;
 }
 
 int TraceParser::ReadFromStream(unsigned char* buff, size_t size, FILE *input) {
@@ -239,6 +242,18 @@ int TraceParser::SmtToAst(Z3_ast &ast, char *smt, size_t size) {
 		return false;
 
 	return true;
+}
+
+bool TraceParser::GetAddressAssertion(size_t index, struct AddressAssertion *&addrAssertion) {
+	if (index < 0 || index >= addrAssertions.size())
+		return false;
+
+	addrAssertion = &addrAssertions[index];
+	return false;
+}
+
+void TraceParser::GetHandler(Z3Handler *&handler) {
+	handler = &z3Handler;
 }
 
 void TraceParser::DebugPrint(unsigned type) {

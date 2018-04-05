@@ -12,6 +12,7 @@
 #define FLAG_LEN ((1 << 3) - 1)
 #endif
 
+
 struct BareBasicBlock {
 	unsigned int offset;
 	char module[MAX_PATH + 1];
@@ -53,6 +54,9 @@ struct AddressAssertion {
 	Z3_ast symbolicAddress;         //Z3 formula for address
 };
 
+
+typedef int (*sanitizer_address)(const struct AddressAssertion &);
+
 struct JccCondition {
 	unsigned int testFlags;			//flags that are tested by jump instruction
 	unsigned int condition;			//symbolic value of jump condition
@@ -60,6 +64,8 @@ struct JccCondition {
 	struct BasicBlock basicBlock;	//basic block info to be used in assertions
 	Z3_ast symbolicCondition;		//Z3 formula for jump condition
 };
+
+typedef int (*sanitizer_jcc)(const struct JccCondition &);
 
 enum ParserState {
 	NONE = 0,
@@ -75,6 +81,8 @@ class TraceParser {
 		~TraceParser();
 
 		bool Parse(FILE *input);
+		bool GetAddressAssertion(size_t index, struct AddressAssertion *&addrAssertion);
+		void GetHandler(Z3Handler *&handler);
 
 	private:
 		std::vector<struct AddressAssertion> addrAssertions;

@@ -7,5 +7,11 @@ class AddressSanitizer : public AbstractSanitizer {
 	public:
 		AddressSanitizer();
 		~AddressSanitizer();
+
+		void setZ3Handler(Z3Handler *z3Handler);
+		bool sanitize(const struct AddressAssertion &addrAssertion);
+
+	private:
+		Z3Handler *z3Handler;
 };
 #endif
