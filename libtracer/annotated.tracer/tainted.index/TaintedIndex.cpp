@@ -5,7 +5,7 @@ TaintedIndex::TaintedIndex(const DWORD index)
 {}
 
 TaintedIndex::TaintedIndex()
-  :Index(0)
+  :Index(1)
 {}
 
 void TaintedIndex::NextIndex() {

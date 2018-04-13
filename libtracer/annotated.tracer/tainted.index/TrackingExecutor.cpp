@@ -19,8 +19,9 @@ TrackingExecutor::TrackingExecutor(sym::SymbolicEnvironment *e,
 
 void *TrackingExecutor::CreateVariable(const char *name, DWORD size) {
 	unsigned int source = atoi(name + 2);
+	DWORD sizeInBits = size << 3;
 	if (source < varCount) {
-		aFormat->WriteTaintedIndexPayload(ti->GetIndex(), source);
+		aFormat->WriteTaintedIndexPayload(ti->GetIndex(), source, sizeInBits);
 	} else {
 		fprintf(stderr, "Error: Wrong index: I[%lu]\n", ti->GetIndex());
 	}
@@ -30,7 +31,10 @@ void *TrackingExecutor::CreateVariable(const char *name, DWORD size) {
 }
 
 void *TrackingExecutor::MakeConst(DWORD value, DWORD bits) {
-	return nullptr;
+	DWORD res = ti->GetIndex();
+	aFormat->WriteTaintedIndexConst(res, value, bits);
+	ti->NextIndex();
+	return (void *)res;
 }
 
 void *TrackingExecutor::ExtractBits(void *expr, DWORD lsb, DWORD size) {
