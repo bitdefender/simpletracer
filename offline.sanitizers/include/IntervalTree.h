@@ -31,6 +31,10 @@ struct Interval {
 		return this->low;
 	}
 
+	T GetHigh() {
+		return this->high;
+	}
+
 	void Print() {}
 
 	~Interval() {}
@@ -111,6 +115,12 @@ struct IntervalNode {
 		return left_height - right_height;
 	}
 
+
+	void UpdateMax() {
+		max = std::max(this->interval.GetHigh(), this->right->max);
+		max = std::max(max, this->left->max);
+	}
+
 	void Print();
 	struct IntervalNode<T> *LeftRotate();
 	struct IntervalNode<T> *RightRotate();
@@ -134,6 +144,10 @@ struct IntervalNode<T> *IntervalNode<T>::LeftRotate() {
 	x->Higher();
 	y->Higher();
 
+	//update max
+	x->UpdateMax();
+	y->UpdateMax();
+
 	//return new root
 	return y;
 }
@@ -152,6 +166,10 @@ struct IntervalNode<T> *IntervalNode<T>::RightRotate() {
 	//update heights
 	z->Higher();
 	y->Higher();
+
+	//update max
+	z->UpdateMax();
+	y->UpdateMax();
 
 	//return new root
 	return y;
@@ -232,7 +250,6 @@ void IntervalNode<T>::AssignChild(bool direction, IntervalNode<T> *child) {
 	} else if (direction == RIGHT_CHILD) {
 		this->right = child;
 	}
-	// do rebalance
 }
 
 template <>
