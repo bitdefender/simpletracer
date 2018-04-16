@@ -6,6 +6,9 @@ int main() {
 	it_empty.AddInterval(4, 10);
 	it_empty.AddInterval(1, 6);
 	it_empty.AddInterval(12, 13);
+	it_empty.AddInterval(14, 13);
+	it_empty.AddInterval(6, 13);
+	it_empty.AddInterval(13, 13);
 	it_empty.AddInterval(3, 5);
 
 	it_empty.PrintTree();
