@@ -12,6 +12,8 @@ int main() {
 	it_empty.AddInterval(3, 5);
 
 	it_empty.PrintTree();
+	it_empty.RemoveInterval(4, 10);
+	it_empty.PrintTree();
 
 	return 0;
 }

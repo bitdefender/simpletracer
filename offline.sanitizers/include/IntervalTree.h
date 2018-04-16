@@ -76,12 +76,15 @@ struct IntervalNode {
 		height = 1;
 	}
 
-	void Higher() {
+	void UpdateHeight() {
+		if (this->left == nullptr && this->right == nullptr) {
+			height = 1;
+			return;
+		}
+
 		if (this->left == nullptr) {
-			assert(this->right != nullptr);
 			height = 1 + this->right->GetHeight();
 		} else if (this->right == nullptr) {
-			assert(this->left != nullptr);
 			height = 1 + this->left->GetHeight();
 		} else {
 			height = 1 + std::max(this->left->GetHeight(),
@@ -121,10 +124,18 @@ struct IntervalNode {
 		max = std::max(max, this->left->max);
 	}
 
+	struct IntervalNode<T> *LeftMost() {
+		if (this->left != nullptr)
+			return this->left->LeftMost();
+
+		return this;
+	}
+
 	void Print();
 	struct IntervalNode<T> *LeftRotate();
 	struct IntervalNode<T> *RightRotate();
 	struct IntervalNode<T> *RecursiveAdd(T low, T high);
+	struct IntervalNode<T> *RecursiveDelete(T low, T high);
 	void AssignChild(bool direction, IntervalNode<T> *child);
 };
 
@@ -141,8 +152,8 @@ struct IntervalNode<T> *IntervalNode<T>::LeftRotate() {
 	x->right = T2;
 
 	//update heights
-	x->Higher();
-	y->Higher();
+	x->UpdateHeight();
+	y->UpdateHeight();
 
 	//update max
 	x->UpdateMax();
@@ -164,8 +175,8 @@ struct IntervalNode<T> *IntervalNode<T>::RightRotate() {
 	z->right = T3;
 
 	//update heights
-	z->Higher();
-	y->Higher();
+	z->UpdateHeight();
+	y->UpdateHeight();
 
 	//update max
 	z->UpdateMax();
@@ -202,7 +213,7 @@ struct IntervalNode<T> *IntervalNode<T>::RecursiveAdd(T low, T high) {
 	}
 
 	// increase height
-	Higher();
+	UpdateHeight();
 
 	// compute balance factor
 	int balance_factor = this->GetBalanceFactor();
@@ -237,6 +248,58 @@ struct IntervalNode<T> *IntervalNode<T>::RecursiveAdd(T low, T high) {
 		// balanced
 	}
 
+	return this;
+}
+
+template <typename T>
+IntervalNode<T> *IntervalNode<T>::RecursiveDelete(T low, T high) {
+	T key = low;
+	T current_key = this->interval.GetKey();
+
+	if (key < current_key) {
+		if (this->left == nullptr)
+			return nullptr;
+
+		auto tmp = this->left;
+		this->left = this->left->RecursiveDelete(low, high);
+
+		if (this->left != tmp) {
+			tmp->left = nullptr;
+			tmp->right = nullptr;
+			delete tmp;
+		}
+	} else if (key > current_key) {
+		if (this->right == nullptr)
+			return nullptr;
+
+		auto tmp = this->right;
+		this->right = this->right->RecursiveDelete(low, high);
+
+		if (this->right != tmp) {
+			tmp->left = nullptr;
+			tmp->right = nullptr;
+			delete tmp;
+		}
+	} else if (key == current_key) {
+		T current_high = this->interval.GetHigh();
+		if (high != current_high) {
+			return this;
+		}
+
+		if (this->left == nullptr) {
+			return this->right;
+		} else if (this->right == nullptr) {
+			return this->left;
+		}
+
+		// get leftmost in right subtree
+		auto leftmost = this->right->LeftMost();
+		this->interval = leftmost->interval;
+		this->right = this->right->RecursiveDelete(this->interval.low,
+				this->interval.high);
+	}
+
+	this->UpdateHeight();
 	return this;
 }
 
@@ -325,10 +388,19 @@ void IntervalTree<T>::AddInterval(T low, T high) {
 }
 
 template <typename T>
+void IntervalTree<T>::RemoveInterval(T low, T high) {
+	if (IsEmpty())
+		return;
+
+	root = root->RecursiveDelete(low, high);
+}
+
+template <typename T>
 void IntervalTree<T>::PrintTree() {
 	if (IsEmpty())
 		return;
 	root->Print();
+	printf("===================================\n");
 }
 
 #endif
