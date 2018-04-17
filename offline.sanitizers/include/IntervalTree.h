@@ -45,6 +45,11 @@ inline void Interval<int>::Print() {
 	printf("(%d %d)\n", low, high);
 }
 
+template <>
+inline void Interval<unsigned>::Print() {
+	printf("(0x%08X 0x%08X)\n", low, high);
+}
+
 template <typename T>
 struct IntervalNode {
 	struct Interval<T> interval;
@@ -129,6 +134,24 @@ struct IntervalNode {
 			return this->left->LeftMost();
 
 		return this;
+	}
+
+	bool HasValue(T value) {
+		T low = this->interval.GetKey();
+		T high = this->interval.GetHigh();
+
+		if (value >= low && value <= high) {
+			return true;
+		}
+
+		if (this->left && this->left->max > value) {
+			return this->left->HasValue(value);
+		}
+
+		if (this->right && this->right->max > value) {
+			return this->right->HasValue(value);
+		}
+		return false;
 	}
 
 	void Print();
@@ -320,6 +343,11 @@ inline void IntervalNode<int>::PrintMax() {
 	printf("max: %d; ", max);
 }
 
+template <>
+inline void IntervalNode<unsigned>::PrintMax() {
+	printf("max: 0x%08X; ", max);
+}
+
 template <typename T>
 void IntervalNode<T>::Print() {
 	printf("height: %zu; ", this->height);
@@ -346,6 +374,7 @@ class IntervalTree {
 		bool IsEmpty();
 		void AddInterval(T low, T high);
 		void RemoveInterval(T low, T high);
+		bool HasValue(T value);
 		bool Overlaps(T low, T high);
 
 		void PrintTree();
@@ -393,6 +422,13 @@ void IntervalTree<T>::RemoveInterval(T low, T high) {
 		return;
 
 	root = root->RecursiveDelete(low, high);
+}
+
+template <typename T>
+bool IntervalTree<T>::HasValue(T value) {
+	if (IsEmpty())
+		return false;
+	return root->HasValue(value);
 }
 
 template <typename T>
