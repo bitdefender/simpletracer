@@ -45,6 +45,6 @@ bool AddressSanitizer::sanitize(const struct AddressAssertion &addrAssertion) {
 		LogSymbolicReturnAddress(addrAssertion);
 		DEBUG_BREAK;
 	}
-	printf("esp: 0x%08X\n", esp);
+	printf("Checking esp: 0x%08X\nInterval tree: ", esp);
 	address_space.PrintTree();
 }

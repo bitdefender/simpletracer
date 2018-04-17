@@ -249,7 +249,7 @@ bool TraceParser::GetAddressAssertion(size_t index, struct AddressAssertion *&ad
 		return false;
 
 	addrAssertion = &addrAssertions[index];
-	return false;
+	return true;
 }
 
 void TraceParser::GetHandler(Z3Handler *&handler) {
