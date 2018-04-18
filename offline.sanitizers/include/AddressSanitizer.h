@@ -10,6 +10,7 @@ class AddressSanitizer : public AbstractSanitizer {
 
 		void setZ3Handler(Z3Handler *z3Handler);
 		bool sanitize(const struct AddressAssertion &addrAssertion);
+		void LogBacktrace(const struct AddressAssertion &addrAssertion);
 		void LogSymbolicReturnAddress(const struct AddressAssertion &addrAssertion);
 
 	private:

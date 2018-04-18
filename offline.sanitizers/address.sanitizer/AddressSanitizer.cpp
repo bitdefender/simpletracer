@@ -16,6 +16,10 @@ void AddressSanitizer::setZ3Handler(Z3Handler *z3Handler) {
 	this->z3Handler = z3Handler;
 }
 
+void AddressSanitizer::LogBacktrace(const struct AddressAssertion &addrAssertion) {
+
+}
+
 void AddressSanitizer::LogSymbolicReturnAddress(const struct AddressAssertion &addrAssertion) {
 	printf("Error type: symbolic return address\n");
 	printf("Module name: %s + 0x%08X\n",
@@ -38,13 +42,24 @@ bool AddressSanitizer::sanitize(const struct AddressAssertion &addrAssertion) {
 	if (z3Handler == nullptr)
 		return false;
 	IntervalTree<unsigned> address_space;
-	const unsigned esp = addrAssertion.basicBlock.assertionData.asAddress.esp;
-	bool err = z3Handler->solve<unsigned>(
+	//const unsigned esp = addrAssertion.basicBlock.assertionData.asAddress.esp;
+	bool err;
+
+	err = z3Handler->solve<unsigned>(
 			addrAssertion.symbolicAddress, "address_symbol", address_space);
+	const unsigned esp = 0x11;
+
 	if (address_space.HasValue(esp)) {
-		LogSymbolicReturnAddress(addrAssertion);
-		DEBUG_BREAK;
+		bool valid_address = true;
+		unsigned char input[10];
+		bool err = z3Handler->solveEq<unsigned char>(
+				addrAssertion.symbolicAddress, esp,
+				"address_symbol", input, valid_address);
+		if (!valid_address) {
+			LogSymbolicReturnAddress(addrAssertion);
+			LogBacktrace(addrAssertion);
+		}
 	}
-	printf("Checking esp: 0x%08X\nInterval tree: ", esp);
+	printf("Checked esp: 0x%08X\nInterval tree: ", esp);
 	address_space.PrintTree();
 }

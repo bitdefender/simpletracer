@@ -81,3 +81,39 @@ void Z3Handler::PrintAst(Z3_ast ast) {
 	Z3_set_ast_print_mode(context, Z3_PRINT_SMTLIB2_COMPLIANT);
 	PRINT("%s\n", Z3_ast_to_string(context, ast));
 }
+
+Z3Model::Z3Model(Z3_context context, Z3_optimize opt)
+	: context(context), opt(opt), valid(false), num_constants(0)
+{
+	switch (Z3_optimize_check(context, opt)) {
+		case Z3_L_FALSE:
+			break;
+		case Z3_L_UNDEF:
+			break;
+		case Z3_L_TRUE:
+			model = Z3_optimize_get_model(context, opt);
+			num_constants = Z3_model_get_num_consts(context, model);
+			valid = true;
+		default:
+			break;
+	}
+}
+
+Z3_string Z3Model::get_symbol_string(unsigned index) {
+	if (!valid || index < 0 || index >= num_constants) {
+		return nullptr;
+	}
+	Z3_func_decl c = Z3_model_get_const_decl(context, model, index);
+
+	Z3_symbol name = Z3_get_decl_name(context, c);
+	return Z3_get_symbol_string(context, name);
+}
+
+Z3_ast Z3Model::get_ast(unsigned index) {
+	if (!valid || index < 0 || index >= num_constants) {
+		return nullptr;
+	}
+	Z3_func_decl c = Z3_model_get_const_decl(context, model, index);
+
+	return Z3_model_get_const_interp(context, model, c);
+}

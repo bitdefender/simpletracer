@@ -6,6 +6,62 @@
 #include "CommonCrossPlatform/Common.h"
 
 #include <string.h>
+#include <string>
+
+class Z3Model {
+	public:
+		Z3Model(Z3_context context, Z3_optimize opt);
+		~Z3Model() {}
+
+		template <typename T>
+		int get_values(const char *variable_name, T &result);
+
+		Z3_string get_symbol_string(unsigned index);
+
+		unsigned get_num_constants() {
+			return num_constants;
+		}
+
+	private:
+		Z3_model model;
+		Z3_context context;
+		Z3_optimize opt;
+		bool valid;
+		unsigned num_constants;
+
+		Z3_ast get_ast(unsigned index);
+};
+
+template <typename T>
+int Z3Model::get_values(const char *variable_name, T &result) {
+	if (!valid)
+		return -1;
+
+	int err;
+
+	for (unsigned index = 0; index < get_num_constants(); ++index) {
+		Z3_string name = get_symbol_string(index);
+
+		if (strcmp(name, variable_name) != 0) {
+			continue;
+		}
+
+		Z3_ast ast = get_ast(index);
+
+		Z3_ast val;
+		Z3_bool pEval = Z3_model_eval(context, model,
+				ast, Z3_TRUE, &val);
+
+		unsigned ret;
+		Z3_bool p = Z3_get_numeral_uint(context, val, &ret);
+		printf("INFO: got uint  %u var: %s\n", ret, name);
+
+		result = (T)ret;
+		return 0;
+	}
+	return -1;
+}
+
 
 class Z3Handler {
 	const int MAX_LEN = 4;
@@ -18,24 +74,69 @@ class Z3Handler {
 		void PrintAst(Z3_ast ast);
 
 		template <class T>
-		bool solve(Z3_ast ast, const char *variable_name, IntervalTree<T> &result);
+		int solve(Z3_ast ast, const char *variable_name,
+				IntervalTree<T> &result);
+
+		template <typename T>
+		int solveEq(Z3_ast ast, const unsigned concrete,
+				const char *variable_name, T *input, bool &valid_address);
 
 	private:
 		Z3_context context;
 		Z3_optimize opt;
-
-		template <typename T>
-		bool check_opt_and_get_values(const char *variable_name, T &result);
-
-		template <typename T>
-		bool get_constants(Z3_model model, const char *variable_name, T &result);
 };
 
+template <typename T>
+int Z3Handler::solveEq(Z3_ast ast, const unsigned concrete,
+		const char *variable_name,  T* input, bool &valid_address) {
+	int err;
+
+	Z3_optimize_push(context, opt);
+	Z3_optimize_assert(context, opt, ast);
+
+	Z3_symbol address_symbol = Z3_mk_string_symbol(context, variable_name);
+	Z3_sort dwordSort = Z3_mk_bv_sort(context, 32);
+	Z3_ast address_symbol_const = Z3_mk_const(context, address_symbol, dwordSort);
+
+	Z3_ast eq = Z3_mk_eq(context, address_symbol_const,
+			Z3_mk_unsigned_int(context, concrete, dwordSort));
+
+	Z3_optimize_assert(context, opt, eq);
+	Z3_optimize_push(context, opt);
+
+	// get all input names excepting address_symbol
+
+	Z3Model model(context, opt);
+
+	for (unsigned index = 0; index < model.get_num_constants(); ++index) {
+		Z3_string z3_symbol_string = model.get_symbol_string(index);
+		std::string symbol(z3_symbol_string);
+
+		int input_id;
+		if (sscanf(z3_symbol_string, "s[%d]", &input_id) == 0) {
+			continue;
+		}
+
+		unsigned char c;
+		err = model.get_values<unsigned char>(symbol.c_str(), c);
+
+		if (err) {
+			DEBUG_BREAK;
+		}
+
+		printf("[%u] %s : 0x%02X\n", index, symbol.c_str(), c);
+	}
+
+	Z3_optimize_pop(context, opt);
+	Z3_optimize_pop(context, opt);
+	return err;
+}
+
 template <class T>
-bool Z3Handler::solve(Z3_ast ast, const char *variable_name, IntervalTree<T> &result) {
+int Z3Handler::solve(Z3_ast ast, const char *variable_name, IntervalTree<T> &result) {
 
 	unsigned ret;
-	bool err;
+	int err;
 	T minimum, maximum;
 
 	Z3_optimize_push(context, opt);
@@ -49,7 +150,9 @@ bool Z3Handler::solve(Z3_ast ast, const char *variable_name, IntervalTree<T> &re
 
 	ret = Z3_optimize_maximize(context, opt, address_symbol_const);
 	// get minimum values for address and input chars
-	err = check_opt_and_get_values<T>(variable_name, maximum);
+
+	Z3Model model_max(context, opt);
+	err = model_max.get_values<T>(variable_name, maximum);
 	if (err) {
 		DEBUG_BREAK;
 	}
@@ -58,8 +161,10 @@ bool Z3Handler::solve(Z3_ast ast, const char *variable_name, IntervalTree<T> &re
 
 	Z3_optimize_push(context, opt);
 	ret = Z3_optimize_minimize(context, opt, address_symbol_const);
+
 	// get maximum values for address and input chars
-	err = check_opt_and_get_values<T>(variable_name, minimum);
+	Z3Model model_min(context, opt);
+	err = model_min.get_values<T>(variable_name, minimum);
 	if (err) {
 		DEBUG_BREAK;
 	}
@@ -68,53 +173,8 @@ bool Z3Handler::solve(Z3_ast ast, const char *variable_name, IntervalTree<T> &re
 
 	Z3_optimize_pop(context, opt);
 	Z3_optimize_pop(context, opt);
-}
 
-template <typename T>
-bool Z3Handler::get_constants(Z3_model model, const char *variable_name, T &result) {
-	unsigned int cnt = Z3_model_get_num_consts(context, model);
-
-	for (unsigned int i = 0; i < cnt; ++i) {
-		Z3_func_decl c = Z3_model_get_const_decl(context, model, i);
-
-		Z3_ast ast = Z3_model_get_const_interp(context, model, c);
-		Z3_symbol name = Z3_get_decl_name(context, c);
-		Z3_string r = Z3_get_symbol_string(context, name);
-
-		if (strcmp(r, variable_name) != 0) {
-			continue;
-		}
-
-		Z3_ast val;
-		Z3_bool pEval = Z3_model_eval(context, model, ast, Z3_TRUE, &val);
-
-		unsigned ret;
-		Z3_bool p = Z3_get_numeral_uint(context, val, &ret);
-
-		result = (T)ret;
-		return false;
-	}
-
-	return true;
-}
-
-template <typename T>
-bool Z3Handler::check_opt_and_get_values(const char *variable_name, T &result) {
-	Z3_model model;
-	bool err;
-	switch (Z3_optimize_check(context, opt)) {
-		case Z3_L_FALSE:
-			break;
-		case Z3_L_UNDEF:
-			break;
-		case Z3_L_TRUE:
-			model = Z3_optimize_get_model(context, opt);
-			err = get_constants<T>(model, variable_name, result);
-			return err;
-		default:
-			break;
-	}
-	return true;
+	return err;
 }
 
 #endif
