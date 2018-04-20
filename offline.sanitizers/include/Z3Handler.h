@@ -7,6 +7,7 @@
 
 #include <string.h>
 #include <string>
+#include <map>
 
 class Z3Model {
 	public:
@@ -54,7 +55,6 @@ int Z3Model::get_values(const char *variable_name, T &result) {
 
 		unsigned ret;
 		Z3_bool p = Z3_get_numeral_uint(context, val, &ret);
-		printf("INFO: got uint  %u var: %s\n", ret, name);
 
 		result = (T)ret;
 		return 0;
@@ -79,7 +79,7 @@ class Z3Handler {
 
 		template <typename T>
 		int solveEq(Z3_ast ast, const unsigned concrete,
-				const char *variable_name, T *input, bool &valid_address);
+				const char *variable_name, std::map<std::string, T> &input);
 
 	private:
 		Z3_context context;
@@ -88,7 +88,7 @@ class Z3Handler {
 
 template <typename T>
 int Z3Handler::solveEq(Z3_ast ast, const unsigned concrete,
-		const char *variable_name,  T* input, bool &valid_address) {
+		const char *variable_name, std::map <std::string, T> &input) {
 	int err;
 
 	Z3_optimize_push(context, opt);
@@ -124,7 +124,7 @@ int Z3Handler::solveEq(Z3_ast ast, const unsigned concrete,
 			DEBUG_BREAK;
 		}
 
-		printf("[%u] %s : 0x%02X\n", index, symbol.c_str(), c);
+		input[symbol] = c;
 	}
 
 	Z3_optimize_pop(context, opt);

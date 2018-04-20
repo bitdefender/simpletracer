@@ -50,16 +50,14 @@ bool AddressSanitizer::sanitize(const struct AddressAssertion &addrAssertion) {
 	const unsigned esp = 0x11;
 
 	if (address_space.HasValue(esp)) {
-		bool valid_address = true;
-		unsigned char input[10];
+		std::map<std::string, unsigned char> input;
 		bool err = z3Handler->solveEq<unsigned char>(
 				addrAssertion.symbolicAddress, esp,
-				"address_symbol", input, valid_address);
-		if (!valid_address) {
+				"address_symbol", input);
+		if (input.size()) {
 			LogSymbolicReturnAddress(addrAssertion);
 			LogBacktrace(addrAssertion);
+			LogCrashingInput(input);
 		}
 	}
-	printf("Checked esp: 0x%08X\nInterval tree: ", esp);
-	address_space.PrintTree();
 }
