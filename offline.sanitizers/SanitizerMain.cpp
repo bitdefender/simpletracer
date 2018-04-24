@@ -64,7 +64,9 @@ int main(int argc, const char *argv[]) {
 	while (ret) {
 		struct AddressAssertion *addrAssertion;
 		ret = parser->GetAddressAssertion(index++, addrAssertion);
-		((AddressSanitizer *)sanitizer)->sanitize(*addrAssertion);
+		if (ret) {
+			((AddressSanitizer *)sanitizer)->sanitize(*addrAssertion);
+		}
 	}
 
 	fclose(input);
