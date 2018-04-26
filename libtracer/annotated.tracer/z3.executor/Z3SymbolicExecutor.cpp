@@ -6,7 +6,7 @@
 
 #include "utils.h"
 
-#define PRINT_DEBUG_SYMBOLIC
+//#define PRINT_DEBUG_SYMBOLIC
 //#define PRINT_AST
 
 #ifndef PRINT_DEBUG_SYMBOLIC
@@ -998,7 +998,7 @@ void Z3SymbolicExecutor::AddOperands(struct OperandInfo &left,
 				left.fields |= OP_HAS_SYMBOLIC;
 			}
 
-			printf("<sym> mkint %p <= %08lX\n", left.symbolic, left.concreteBefore + displacement);
+			printf("<sym> mkint left %p <= %08lX\n", left.symbolic, left.concreteBefore + displacement);
 		}
 
 		if (0 == (right.fields & OP_HAS_SYMBOLIC)) {
@@ -1013,7 +1013,7 @@ void Z3SymbolicExecutor::AddOperands(struct OperandInfo &left,
 				right.fields |= OP_HAS_SYMBOLIC;
 			}
 
-			printf("<sym> mkint %p <= %08lX\n", right.symbolic, right.concreteBefore + displacement);
+			printf("<sym> mkint right %p <= %08lX + %d\n", right.symbolic, right.concreteBefore, displacement);
 		}
 
 		// add two symbolic objects
@@ -1070,7 +1070,7 @@ void Z3SymbolicExecutor::Execute(RiverInstruction *instruction) {
 		bool hasDisplacement = env->GetAddressDisplacement(i, addressDisplacement);
 
 		AddOperands(baseOpInfo, composedIndexOpInfo,
-				addressDisplacement.disp,
+				hasDisplacement ? addressDisplacement.disp : 0,
 				opAddressInfo);
 
 		if (opAddressInfo.fields & OP_HAS_SYMBOLIC) {
