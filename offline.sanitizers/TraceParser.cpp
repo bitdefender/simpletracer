@@ -19,6 +19,7 @@ TraceParser::TraceParser()
 	: z3Handler()
 {
 	state = NONE;
+	lviAddr = lviJcc = -1;
 	memset(lastModule, 0, MAX_PATH + 1);
 	memset(lastNextModule, 0, MAX_PATH + 1);
 	CleanTempStructs();
@@ -92,17 +93,10 @@ bool TraceParser::Parse(FILE *input) {
 					DEBUG_BREAK;
 				state = Z3_OFFSET;
 
-				switch(symbolicType) {
-					case Z3_SYMBOLIC_TYPE_ADDRESS:
-						tmpBasicBlock.assertionData.asAddress.esp = ble->data.asBBOffset.esp;
-						break;
-					case Z3_SYMBOLIC_TYPE_JCC:
-						tmpBasicBlock.assertionData.asJcc.jumpType = ble->data.asBBOffset.jumpType;
-						tmpBasicBlock.assertionData.asJcc.jumpInstruction = ble->data.asBBOffset.jumpInstruction;
-						break;
-					default:
-						DEBUG_BREAK;
-				}
+				tmpBasicBlock.assertionData.address.esp = ble->data.asBBOffset.esp;
+
+				tmpBasicBlock.assertionData.jcc.jumpType = ble->data.asBBOffset.jumpType;
+				tmpBasicBlock.assertionData.jcc.jumpInstruction = ble->data.asBBOffset.jumpInstruction;
 
 				if (!tmpBasicBlock.current.offset) {
 					tmpBasicBlock.current.offset = ble->data.asBBOffset.offset;
@@ -116,32 +110,30 @@ bool TraceParser::Parse(FILE *input) {
 				if (next > 1)
 					DEBUG_BREAK;
 
-				tmpBasicBlock.assertionData.asJcc.next[next++].offset = ble->data.asBBOffset.offset;
+				tmpBasicBlock.assertionData.jcc.next[next++].offset = ble->data.asBBOffset.offset;
 				if (next > 1) {
-					switch(symbolicType) {
-						case Z3_SYMBOLIC_TYPE_ADDRESS:
-							tmpAddrAssertion.basicBlock = tmpBasicBlock;
-							strcpy(tmpAddrAssertion.basicBlock.current.module, lastModule);
-							DebugPrint(tmpAddrAssertion);
-							addrAssertions.push_back(tmpAddrAssertion);
-							break;
-						case Z3_SYMBOLIC_TYPE_JCC:
-							tmpJccCond.basicBlock = tmpBasicBlock;
-							strcpy(tmpJccCond.basicBlock.current.module, lastModule);
+					// update last elements in assertion arrays
+					for (int i = lviAddr + 1; i < addrAssertions.size(); ++i) {
+							addrAssertions[i].basicBlock = tmpBasicBlock;
+							strcpy(addrAssertions[i].basicBlock.current.module, lastModule);
+							DebugPrint(addrAssertions[i]);
+					}
+					lviAddr = addrAssertions.size() - 1;
+
+					for (int i = lviJcc; i < jccConditions.size(); ++i) {
+							jccConditions[i].basicBlock = tmpBasicBlock;
+							strcpy(jccConditions[i].basicBlock.current.module, lastModule);
 
 							for (int i = 0; i < 2; ++i) {
-								if (tmpJccCond.basicBlock.assertionData.asJcc.next[i].module[0] == 0) {
-									strcpy(tmpJccCond.basicBlock.assertionData.asJcc.next[i].module,
+								if (jccConditions[i].basicBlock.assertionData.jcc.next[i].module[0] == 0) {
+									strcpy(jccConditions[i].basicBlock.assertionData.jcc.next[i].module,
 											lastNextModule);
 								}
 							}
-
-							DebugPrint(tmpJccCond);
-							jccConditions.push_back(tmpJccCond);
-							break;
-						default:
-							DEBUG_BREAK;
+							DebugPrint(jccConditions[i]);
 					}
+					lviJcc = jccConditions.size() - 1;
+
 					next = 0;
 					state = NONE;
 					CleanTempStructs();
@@ -157,11 +149,9 @@ bool TraceParser::Parse(FILE *input) {
 				if (state != Z3_OFFSET)
 					DEBUG_BREAK;
 
-				if (symbolicType == Z3_SYMBOLIC_TYPE_JCC) {
-					memset(tmpJccCond.basicBlock.assertionData.asJcc.next[next].module, 0, MAX_PATH + 1);
-					strncpy(tmpJccCond.basicBlock.assertionData.asJcc.next[next].module,
-							(char *)&ble->data, bleh->entryLength);
-				}
+				memset(tmpJccCond.basicBlock.assertionData.jcc.next[next].module, 0, MAX_PATH + 1);
+				strncpy(tmpJccCond.basicBlock.assertionData.jcc.next[next].module,
+						(char *)&ble->data, bleh->entryLength);
 				break;
 			case ENTRY_TYPE_Z3_MODULE:
 				if (state != NONE)
@@ -171,8 +161,11 @@ bool TraceParser::Parse(FILE *input) {
 				ExchageModule(lastModule, (char *)&ble->data, bleh->entryLength);
 				break;
 			case ENTRY_TYPE_Z3_SYMBOLIC:
-				if (!(state == NONE || state == Z3_MODULE))
+				if (state == Z3_AST) {
+					CleanTempStructs();
+				} else if (!(state == NONE || state == Z3_MODULE)) {
 					DEBUG_BREAK;
+				}
 				state = Z3_SYMBOLIC_OBJECT;
 
 				symbolicType = ble->data.asZ3Symbolic.header.entryType;
@@ -211,9 +204,11 @@ bool TraceParser::Parse(FILE *input) {
 				switch(symbolicType) {
 					case Z3_SYMBOLIC_TYPE_ADDRESS:
 						tmpAddrAssertion.symbolicAddress = ast;
+						addrAssertions.push_back(tmpAddrAssertion);
 						break;
 					case Z3_SYMBOLIC_TYPE_JCC:
 						tmpJccCond.symbolicCondition = ast;
+						jccConditions.push_back(tmpJccCond);
 						break;
 					default:
 						DEBUG_BREAK;
@@ -335,34 +330,34 @@ void TraceParser::DebugPrint(const struct JccCondition &jccCondition) {
 	}
 	PRINT("\n");
 	PRINT("JccCondition: ");
-	PrintJump(jccCondition.basicBlock.assertionData.asJcc.jumpType,
-			jccCondition.basicBlock.assertionData.asJcc.jumpInstruction);
+	PrintJump(jccCondition.basicBlock.assertionData.jcc.jumpType,
+			jccCondition.basicBlock.assertionData.jcc.jumpInstruction);
 	PRINT("\n");
 	for (int i = 0; i < 2; ++i) {
 		PRINT("JccCondition next[%d]: %s + 0x%08X\n", i,
-				jccCondition.basicBlock.assertionData.asJcc.next[i].module,
-				jccCondition.basicBlock.assertionData.asJcc.next[i].offset);
+				jccCondition.basicBlock.assertionData.jcc.next[i].module,
+				jccCondition.basicBlock.assertionData.jcc.next[i].offset);
 	}
 	DebugPrint(jccCondition.symbolicCondition);
 }
 
 void TraceParser::DebugPrint(const struct AddressAssertion &addrAssertion) {
 	PRINT("AddressAssertion %d: + 0x%08X\n", addrAssertions.size(),
-			tmpAddrAssertion.offset);
+			addrAssertion.offset);
 	PRINT("AddressAssertion %p <= %p + %d * %p + %d\n",
-			(void *)tmpAddrAssertion.composedAddress,
-			(void *)tmpAddrAssertion.symbolicBase,
-			tmpAddrAssertion.scale,
-			(void *)tmpAddrAssertion.symbolicIndex,
-			tmpAddrAssertion.displacement);
-	PRINT("AddressAssertion i[%d]/o[%d]\n", tmpAddrAssertion.input,
-			tmpAddrAssertion.output);
+			(void *)addrAssertion.composedAddress,
+			(void *)addrAssertion.symbolicBase,
+			addrAssertion.scale,
+			(void *)addrAssertion.symbolicIndex,
+			addrAssertion.displacement);
+	PRINT("AddressAssertion i[%d]/o[%d]\n", addrAssertion.input,
+			addrAssertion.output);
 
-	PRINT("AddressAssertion tmpBasicBlock: %s + 0x%08X esp: 0x%08X\n",
-			tmpAddrAssertion.basicBlock.current.module,
-			tmpAddrAssertion.basicBlock.current.offset,
-			tmpAddrAssertion.basicBlock.assertionData.asAddress.esp);
-	DebugPrint(tmpAddrAssertion.symbolicAddress);
+	PRINT("AddressAssertion basicBlock: %s + 0x%08X esp: 0x%08X\n",
+			addrAssertion.basicBlock.current.module,
+			addrAssertion.basicBlock.current.offset,
+			addrAssertion.basicBlock.assertionData.address.esp);
+	DebugPrint(addrAssertion.symbolicAddress);
 }
 
 void TraceParser::PrintState() {

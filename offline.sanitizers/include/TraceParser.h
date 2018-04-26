@@ -20,16 +20,16 @@ struct BareBasicBlock {
 
 struct BasicBlock {
 	struct BareBasicBlock current;
-	union AssertionData {
+	struct AssertionData {
 		struct Address {
 			unsigned int esp;
-		} asAddress;
+		} address;
 
 		struct Jcc {
 			unsigned short jumpType;
 			unsigned short jumpInstruction;
 			struct BareBasicBlock next[2];
-		} asJcc;
+		} jcc;
 	} assertionData;
 
 	struct BasicBlock & operator=(const struct BasicBlock &other) {
@@ -88,7 +88,7 @@ class TraceParser {
 		std::vector<struct AddressAssertion> addrAssertions;
 		std::vector<struct JccCondition> jccConditions;
 		Z3Handler z3Handler;
-		int state;
+		int state, lviAddr, lviJcc;
 
 		char lastModule[MAX_PATH + 1];
 		char lastNextModule[MAX_PATH + 1];
