@@ -29,7 +29,7 @@ void AddressSanitizer::LogSymbolicReturnAddress(const struct AddressAssertion &a
 			(addrAssertion.input && addrAssertion.output) ? "input/output" :
 			((addrAssertion.input) ? "input" : "output"));
 	printf("Stack address: 0x%08X\n",
-			addrAssertion.basicBlock.assertionData.address.esp);
+			addrAssertion.basicBlock.assertionData.address.ebpPlusFour);
 	printf("Symbolic Address: 0x%08X <= 0x%08X + 0x%08X x 0x%08X + 0x%08X\n",
 			addrAssertion.composedAddress,
 			addrAssertion.symbolicBase,
@@ -42,16 +42,16 @@ bool AddressSanitizer::sanitize(const struct AddressAssertion &addrAssertion) {
 	if (z3Handler == nullptr)
 		return false;
 	IntervalTree<unsigned> address_space;
-	const unsigned esp = addrAssertion.basicBlock.assertionData.address.esp;
+	const unsigned ebpPlusFour = addrAssertion.basicBlock.assertionData.address.ebpPlusFour;
 	bool err;
 
 	err = z3Handler->solve<unsigned>(
 			addrAssertion.symbolicAddress, "address_symbol", address_space);
 
-	if (address_space.HasValue(esp)) {
+	if (address_space.HasValue(ebpPlusFour)) {
 		std::map<std::string, unsigned char> input;
 		bool err = z3Handler->solveEq<unsigned char>(
-				addrAssertion.symbolicAddress, esp,
+				addrAssertion.symbolicAddress, ebpPlusFour,
 				"address_symbol", input);
 		if (input.size()) {
 			LogSymbolicReturnAddress(addrAssertion);

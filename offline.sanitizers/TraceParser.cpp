@@ -16,7 +16,7 @@
 #define MAX_BUFF (1 << 15)
 
 TraceParser::TraceParser()
-	: z3Handler()
+	: z3Handler(), callStack()
 {
 	state = NONE;
 	lviAddr = lviJcc = -1;
@@ -82,16 +82,12 @@ bool TraceParser::Parse(FILE *input) {
 				state = Z3_OFFSET;
 				break;
 			case ENTRY_TYPE_BB_OFFSET:
-				if (state == NONE) {
-					break;
-				} else if (state == Z3_OFFSET) {
+				if (state == Z3_OFFSET) {
 					// if `next` not sent for previous tmpBasicBlock
 					state = NONE;
-					break;
+				} else {
+					state = Z3_OFFSET;
 				}
-				if (state < Z3_AST)
-					DEBUG_BREAK;
-				state = Z3_OFFSET;
 
 				tmpBasicBlock.assertionData.address.esp = ble->data.asBBOffset.esp;
 
@@ -101,6 +97,11 @@ bool TraceParser::Parse(FILE *input) {
 				if (!tmpBasicBlock.current.offset) {
 					tmpBasicBlock.current.offset = ble->data.asBBOffset.offset;
 				}
+
+				strcpy(tmpBasicBlock.current.module, lastModule);
+
+				DebugPrint(tmpBasicBlock);
+				HandleCallInstruction(tmpBasicBlock);
 				break;
 			case ENTRY_TYPE_BB_NEXT_OFFSET:
 				if (state == NONE)
@@ -360,6 +361,15 @@ void TraceParser::DebugPrint(const struct AddressAssertion &addrAssertion) {
 	DebugPrint(addrAssertion.symbolicAddress);
 }
 
+void TraceParser::DebugPrint(const struct BasicBlock &basicBlock) {
+	PRINT("BB: %s + 0x%08X; esp: 0x%08X; jt %04X; ji %04X\n",
+			basicBlock.current.module,
+			basicBlock.current.offset,
+			basicBlock.assertionData.address.esp,
+			basicBlock.assertionData.jcc.jumpType,
+			basicBlock.assertionData.jcc.jumpInstruction);
+}
+
 void TraceParser::PrintState() {
 	PRINT("state: ");
 	switch(state) {
@@ -401,5 +411,32 @@ void TraceParser::ExchageModule(char *dest, char *moduleName, size_t size) {
 		memset(dest, 0, MAX_PATH + 1);
 		strncpy(dest, moduleName, size);
 		dest[size] = 0;
+	}
+}
+
+void TraceParser::HandleCallInstruction(struct BasicBlock &basicBlock) {
+	struct CallData cd;
+	unsigned espAfterCall, espAfterRet;
+
+	// set return address place (ebp + 4) before modifying call context
+	basicBlock.assertionData.address.ebpPlusFour = callStack.GetLastCallFrame();
+	printf("WARN: got ebp + 4 %08X\n", basicBlock.assertionData.address.ebpPlusFour);
+
+	switch(basicBlock.assertionData.jcc.jumpInstruction) {
+		case RIVER_JUMP_INSTR_CALL:
+			callStack.Push(basicBlock.assertionData.address.esp,
+					basicBlock.current.offset,
+					basicBlock.current.module);
+			break;
+		case RIVER_JUMP_INSTR_RET:
+			// ignore returns that do not correspond to previous call
+			espAfterRet = basicBlock.assertionData.address.esp;
+			espAfterCall = basicBlock.assertionData.address.ebpPlusFour;
+			if (espAfterCall + 4 == espAfterRet) {
+				callStack.Pop(cd);
+			}
+			break;
+		default:
+			break;
 	}
 }

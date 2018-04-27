@@ -92,8 +92,6 @@ Z3Model::Z3Model(Z3_context context, Z3_optimize opt)
 			break;
 		case Z3_L_TRUE:
 			model = Z3_optimize_get_model(context, opt);
-			printf("%s\n", Z3_model_to_string(context, model));
-			printf("%s\n", Z3_optimize_to_string(context, opt));
 			num_constants = Z3_model_get_num_consts(context, model);
 			valid = true;
 		default:

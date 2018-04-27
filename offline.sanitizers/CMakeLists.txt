@@ -17,6 +17,8 @@ add_subdirectory(address.sanitizer)
 
 add_executable(${EXECUTABLE_NAME}
 	Z3Handler.cpp
+	crc32.cpp
+	CallStack.cpp
 	TraceParser.cpp
 	SanitizerMain.cpp
 	)

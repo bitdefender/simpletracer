@@ -3,6 +3,7 @@
 
 #include "z3.h"
 #include "Z3Handler.h"
+#include "CallStack.h"
 
 #include "CommonCrossPlatform/Common.h"
 
@@ -23,6 +24,7 @@ struct BasicBlock {
 	struct AssertionData {
 		struct Address {
 			unsigned int esp;
+			unsigned int ebpPlusFour;
 		} address;
 
 		struct Jcc {
@@ -88,6 +90,7 @@ class TraceParser {
 		std::vector<struct AddressAssertion> addrAssertions;
 		std::vector<struct JccCondition> jccConditions;
 		Z3Handler z3Handler;
+		CallStack callStack;
 		int state, lviAddr, lviJcc;
 
 		char lastModule[MAX_PATH + 1];
@@ -101,11 +104,13 @@ class TraceParser {
 		int SmtToAst(Z3_ast &ast, char *smt, size_t size);
 		void DebugPrint(Z3_ast ast);
 		void DebugPrint(unsigned type);
+		void DebugPrint(const struct BasicBlock &basicBlock);
 		void DebugPrint(const struct AddressAssertion &addrAssertion);
 		void DebugPrint(const struct JccCondition &jccCondition);
 		void PrintState();
 		void PrintJump(unsigned short jumpType, unsigned short jumpInstruction);
 		void CleanTempStructs();
 		void ExchageModule(char *dest, char *moduleName, size_t size);
+		void HandleCallInstruction(struct BasicBlock &basicBlock);
 };
 #endif
