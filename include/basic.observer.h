@@ -20,11 +20,12 @@ class BasicObserver : public ExecutionObserver {
 		std::string fileName;
 
 		bool ctxInit;
+		bool logEsp;
 
 		virtual void TerminationNotification(void *ctx);
 		unsigned int GetModuleOffset(const std::string &module) const;
 		bool PatchLibrary(std::ifstream &fPatch);
-		virtual unsigned int ExecutionBegin(void *ctx, void *address) = 0;
+		virtual unsigned int ExecutionBegin(void *ctx, void *entryPoint) = 0;
 		virtual unsigned int ExecutionControl(void *ctx, void *address) = 0;
 		virtual unsigned int ExecutionEnd(void *ctx) = 0;
 		virtual unsigned int TranslationError(void *ctx, void *address) = 0;

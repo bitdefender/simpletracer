@@ -38,3 +38,7 @@ unsigned int ReadFromFile(FILE* inputFile, unsigned char *buf, int sizeToRead) {
 	}
 	return read;
 }
+
+void ClearExecutionRegisters(struct rev::ExecutionRegs *regs) {
+	memset(regs, 0, sizeof(struct rev::ExecutionRegs));
+}

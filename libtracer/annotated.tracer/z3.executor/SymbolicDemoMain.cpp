@@ -194,7 +194,7 @@ public:
 	AbstractFormat *aFormat;
 public:
 
-	virtual unsigned int ExecutionBegin(void *ctx, rev::ADDR_TYPE addr) {
+	virtual unsigned int ExecutionBegin(void *ctx, rev::ADDR_TYPE entryPoint) {
 		static bool ctxInit = false;
 
 		START_COUNTER(liSymStart, liFreq);

@@ -46,7 +46,7 @@ void DelReference(void *ref) {
 
 namespace at {
 
-unsigned int CustomObserver::ExecutionBegin(void *ctx, void *address) {
+unsigned int CustomObserver::ExecutionBegin(void *ctx, void *entryPoint) {
 	printf("Process starting\n");
 	at->ctrl->GetModules(mInfo, mCount);
 
@@ -80,12 +80,15 @@ unsigned int CustomObserver::ExecutionBegin(void *ctx, void *address) {
 	}
 
 	aFormat->WriteTestName(fileName.c_str());
+	logEsp = true;
 
 	return EXECUTION_ADVANCE;
 }
 
 unsigned int CustomObserver::ExecutionControl(void *ctx, void *address) {
+	rev::ExecutionRegs regs;
 	rev::BasicBlockInfo bbInfo;
+
 	at->ctrl->GetLastBasicBlockInfo(ctx, &bbInfo);
 
 	unsigned int nextSize = 2;
@@ -99,7 +102,13 @@ unsigned int CustomObserver::ExecutionControl(void *ctx, void *address) {
 				(DWORD)bbInfo.branchNext[i].address, mCount, mInfo);
 	}
 
-	rev::ExecutionRegs regs;
+	if (logEsp) {
+		ClearExecutionRegisters(&regs);
+		at->ctrl->GetFirstEsp(ctx, regs.esp);
+		aFormat->WriteRegisters(regs);
+		logEsp = false;
+	}
+
 	at->ctrl->GetCurrentRegisters(ctx, &regs);
 	struct BasicBlockMeta bbm { bbp, bbInfo.cost, bbInfo.branchType,
 			bbInfo.branchInstruction, regs.esp, bbInfo.nInstructions,

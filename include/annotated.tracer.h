@@ -26,7 +26,7 @@ class CustomObserver : public BasicObserver {
 		sym::SymbolicEnvironment *revEnv;
 		sym::SymbolicExecutor *executor;
 
-		virtual unsigned int ExecutionBegin(void *ctx, void *address);
+		virtual unsigned int ExecutionBegin(void *ctx, void *entryPoint);
 		virtual unsigned int ExecutionControl(void *ctx, void *address);
 		virtual unsigned int ExecutionEnd(void *ctx);
 		virtual unsigned int TranslationError(void *ctx, void *address);

@@ -20,8 +20,8 @@
 
 namespace st {
 
-unsigned int CustomObserver::ExecutionBegin(void *ctx, void *address) {
-	st->globalLog.Log("Process starting\n");
+unsigned int CustomObserver::ExecutionBegin(void *ctx, void *entryPoint) {
+	st->globalLog.Log("Process starting. Entry point: %p\n", entryPoint);
 	st->ctrl->GetModules(mInfo, mCount);
 
 	if (HandlePatchLibrary() < 0) {
@@ -32,11 +32,13 @@ unsigned int CustomObserver::ExecutionBegin(void *ctx, void *address) {
 	st->ctrl->GetLastBasicBlockInfo(ctx, &bbInfo);
 
 	aFormat->WriteTestName(fileName.c_str());
+	logEsp = true;
 
 	return EXECUTION_ADVANCE;
 }
 
 unsigned int CustomObserver::ExecutionControl(void *ctx, void *address) {
+	rev::ExecutionRegs regs;
 	rev::BasicBlockInfo bbInfo;
 	st->ctrl->GetLastBasicBlockInfo(ctx, &bbInfo);
 
@@ -52,7 +54,13 @@ unsigned int CustomObserver::ExecutionControl(void *ctx, void *address) {
 				(DWORD)bbInfo.branchNext[i].address, mCount, mInfo);
 	}
 
-	rev::ExecutionRegs	regs;
+	if (logEsp) {
+		ClearExecutionRegisters(&regs);
+		st->ctrl->GetFirstEsp(ctx, regs.esp);
+		aFormat->WriteRegisters(regs);
+		logEsp = false;
+	}
+
 	st->ctrl->GetCurrentRegisters(ctx, &regs);
 	struct BasicBlockMeta bbm { bbp, bbInfo.cost, bbInfo.branchType,
 			bbInfo.branchInstruction, regs.esp, bbInfo.nInstructions, nextSize,
