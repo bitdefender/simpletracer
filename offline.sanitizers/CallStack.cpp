@@ -13,19 +13,23 @@ CallStack::CallStack()
 CallStack::~CallStack() {}
 
 void CallStack::LogEntry(const struct CallData &cd) {
+	const char *moduleName = nullptr;
+	if (modules.count(cd.moduleHash))
+		moduleName = modules[cd.moduleHash].c_str();
+
 	printf("#%zu\t0x%08X at %s\n",
 			stack.size(),
 			cd.offset,
-			modules[cd.moduleHash].c_str());
+			moduleName);
 }
 
 void CallStack::Push(uint32_t esp, uint32_t offset, const char *moduleName) {
 	uint32_t moduleHash = crc32(0,
 			(unsigned char *)moduleName,
-			strlen(moduleName));
+			moduleName == nullptr ? 0 : strlen(moduleName));
 	struct CallData cd(esp, offset, moduleHash);
 
-	if (!modules.count(moduleHash)) {
+	if (moduleName && !modules.count(moduleHash)) {
 		modules[moduleHash] = std::string(moduleName);
 	}
 	stack.push(cd);

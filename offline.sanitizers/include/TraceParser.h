@@ -6,6 +6,7 @@
 #include "CallStack.h"
 
 #include "CommonCrossPlatform/Common.h"
+#include "revtracer/revtracer.h"
 
 #include <vector>
 
@@ -112,5 +113,6 @@ class TraceParser {
 		void CleanTempStructs();
 		void ExchageModule(char *dest, char *moduleName, size_t size);
 		void HandleCallInstruction(struct BasicBlock &basicBlock);
+		void HandleRegisters(struct rev::ExecutionRegs *regs);
 };
 #endif

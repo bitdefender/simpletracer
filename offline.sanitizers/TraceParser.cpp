@@ -71,6 +71,10 @@ bool TraceParser::Parse(FILE *input) {
 			case ENTRY_TYPE_TEST_NAME:
 			case ENTRY_TYPE_INPUT_USAGE:
 			case ENTRY_TYPE_TAINTED_INDEX:
+				break;
+			case ENTRY_TYPE_EXECUTION_REGS:
+				HandleRegisters((struct rev::ExecutionRegs *)&ble->data.asExecutionRegisters);
+				break;
 			case ENTRY_TYPE_BB_MODULE:
 				ExchageModule(lastModule,
 						(char *)&ble->data,
@@ -411,6 +415,12 @@ void TraceParser::ExchageModule(char *dest, char *moduleName, size_t size) {
 		memset(dest, 0, MAX_PATH + 1);
 		strncpy(dest, moduleName, size);
 		dest[size] = 0;
+	}
+}
+
+void TraceParser::HandleRegisters(struct rev::ExecutionRegs *regs) {
+	if (callStack.Empty()) {
+		callStack.Push(regs->esp, 0, nullptr);
 	}
 }
 
