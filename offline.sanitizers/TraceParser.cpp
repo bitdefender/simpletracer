@@ -430,7 +430,10 @@ void TraceParser::HandleCallInstruction(struct BasicBlock &basicBlock) {
 
 	// set return address place (ebp + 4) before modifying call context
 	basicBlock.assertionData.address.ebpPlusFour = callStack.GetLastCallFrame();
-	printf("WARN: got ebp + 4 %08X\n", basicBlock.assertionData.address.ebpPlusFour);
+	PRINT("WARN: [%s] : [%08X] got ebp + 4 %08X\n",
+			basicBlock.current.module,
+			basicBlock.current.offset,
+			basicBlock.assertionData.address.ebpPlusFour);
 
 	switch(basicBlock.assertionData.jcc.jumpInstruction) {
 		case RIVER_JUMP_INSTR_CALL:
