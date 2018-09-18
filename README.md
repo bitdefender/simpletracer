@@ -21,8 +21,8 @@ Create the following symlinks:
 RIVER_NATIVE_LIBS=<some path>
 LIBC_PATH=$(find /lib -name libc.so.6 -path *i386*)
 LIBPTHREAD_PATH=$(find /lib -name libpthread.so.0 -path *i386*)
-ln -s -T $LIBC_PATH $RIVER_NATIVE_LIBS
-ln -s -T $LIBPTHREAD_PATH $RIVER_NATIVE_LIBS
+ln -s -T $LIBC_PATH $RIVER_NATIVE_LIBS/libc.so
+ln -s -T $LIBPTHREAD_PATH $RIVER_NATIVE_LIBS/libpthread.so
 ```
 
 ## 3. run
