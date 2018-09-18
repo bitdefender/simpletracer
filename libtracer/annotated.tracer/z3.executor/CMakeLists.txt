@@ -7,7 +7,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -m32 -std=c++11 ${CROSS_FLAGS}")
 
 include_directories($ENV{RIVER_SDK_DIR}/include)
 
-link_directories (${CMAKE_BINARY_DIR}/lib $ENV{RIVER_SDK_DIR}/lin/lib)
+link_directories (${CMAKE_BINARY_DIR}/lib $ENV{RIVER_SDK_DIR}/lib)
 find_library (symbolicenvironment libsymbolicenvironment.so)
 find_library (execution libexecution.so)
 
