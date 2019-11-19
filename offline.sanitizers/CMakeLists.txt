@@ -6,10 +6,9 @@ set(TEST_INTERVAL_TREE interval.tree.test)
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -g -m32 -std=c++11 -D__cdecl=\"\" -D__stdcall=\"\"")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -m32 -std=c++11 -D__cdecl=\"\" -D__stdcall=\"\"")
 
-include_directories(./include)
-include_directories(${Z3_ROOT}/include)
+include_directories(./include ${CMAKE_INSTALL_PREFIX}/include)
 
-link_directories(${Z3_ROOT}/bin ${Z3_ROOT}/lib)
+link_directories(${CMAKE_INSTALL_PREFIX}/lib)
 find_library (z3 libz3.so)
 
 add_subdirectory(address.sanitizer)

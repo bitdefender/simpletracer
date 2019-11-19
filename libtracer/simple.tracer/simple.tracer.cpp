@@ -161,7 +161,7 @@ int SimpleTracer::Run( ez::ezOptionParser &opt) {
 	if (executionType == EXECUTION_INPROCESS) {
 		LIB_T hModule = GET_LIB_HANDLER2(fModule.c_str());
 		if (nullptr == hModule) {
-			std::cerr << dlerror() < std::endl;
+			std::cerr << dlerror() << std::endl;
 			std::cerr << "Payload not found" << std::endl;
 			return 0;
 		}
