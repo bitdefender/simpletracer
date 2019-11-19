@@ -15,13 +15,18 @@ add_subdirectory (river.format/logger)
 
 add_subdirectory (river.format/format.handler)
 
-if (NOT DEFINED ENV{Z3_ROOT_PATH})
-  if (NOT DEFINED Z3_ROOT)
-    message(FATAL_ERROR "Specify Z3_ROOT variable")
-  endif()
-else()
-  set(Z3_ROOT $ENV{Z3_ROOT_PATH})
-endif()
+execute_process(
+	WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/z3
+	COMMAND python ${CMAKE_CURRENT_SOURCE_DIR}/z3/scripts/mk_make.py --prefix=${CMAKE_INSTALL_PREFIX}
+	)
+execute_process(
+	WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/z3/build
+	COMMAND make
+	)
+execute_process(
+	WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/z3/build
+	COMMAND make install
+	)
 
 add_subdirectory (libtracer)
 add_subdirectory (river.tracer)

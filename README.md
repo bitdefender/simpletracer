@@ -10,8 +10,7 @@ $ git clone https://github.com/bitdefender/simpletracer.git
 ## 2. environment setup
 
 Simpletracer build needs RIVER SDK. Export `RIVER_SDK_DIR` accordingly.  
-Simpletracer supports tracing using Z3 engine. Install Z3 4.4.1 32-bit
-and export `Z3_ROOT_PATH` accordingly.  
+Simpletracer supports tracing using Z3 engine(4.4.1 32-bit).
 Build Simpletracer using `cmake`.
 
 `LD_LIBRARY_PATH` must allow access to RIVER libraries, Z3 library and

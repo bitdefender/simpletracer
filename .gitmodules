@@ -1,3 +1,6 @@
 [submodule "river.format"]
 	path = river.format
 	url = https://github.com/bitdefender/river.format
+[submodule "z3"]
+	path = z3
+	url = https://github.com/Z3Prover/z3.git
