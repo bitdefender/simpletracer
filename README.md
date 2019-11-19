@@ -5,7 +5,7 @@
 ```
 $ mkdir <work-dir>
 $ cd <work-dir>
-$ git clone https://github.com/teodor-stoenescu/simpletracer.git
+$ git clone https://github.com/bitdefender/simpletracer.git
 ```
 ## 2. environment setup
 
