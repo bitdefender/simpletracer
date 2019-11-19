@@ -17,11 +17,11 @@ add_subdirectory (river.format/format.handler)
 
 execute_process(
 	WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/z3
-	COMMAND python ${CMAKE_CURRENT_SOURCE_DIR}/z3/scripts/mk_make.py --prefix=${CMAKE_INSTALL_PREFIX}
+	COMMAND python ${CMAKE_CURRENT_SOURCE_DIR}/z3/scripts/mk_make.py --prefix=${CMAKE_INSTALL_PREFIX} --x86
 	)
 execute_process(
 	WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/z3/build
-	COMMAND make
+	COMMAND make -j5
 	)
 execute_process(
 	WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/z3/build

@@ -11,6 +11,7 @@ link_directories (${CMAKE_BINARY_DIR}/lib $ENV{RIVER_SDK_DIR}/lib)
 find_library (symbolicenvironment libsymbolicenvironment.so)
 find_library (execution libexecution.so)
 
+link_directories(${CMAKE_INSTALL_PREFIX}/lib)
 find_library (z3 libz3.so)
 
 add_executable(${EXECUTABLE_NAME}
