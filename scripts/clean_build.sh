@@ -8,7 +8,7 @@ echo "Checking requirements ..."
 [ "$GITHUB_API_TOKEN" = "" ] && { echo "Error: Set GITHUB_API_TOKEN accordingly"; exit 1; }
 
 echo "Updating the repository ..."
-(cd $SRC_DIR && git pull https://$GITHUB_API_TOKEN@github.com/teodor-stoenescu/simpletracer.git $1)
+(cd $SRC_DIR && git pull https://$GITHUB_API_TOKEN@github.com/bitdefender/simpletracer.git $1)
 
 echo "Cleaning the build environment ..."
 BUILD_DIR="$CWD/build-river-tools"
